@@ -1,5 +1,5 @@
 {
-  "name": "Starter Kit",
+  "name": "Bloqr Doqs",
   "colors": {
     "light": {
       "brand": "#F97316"
@@ -12,85 +12,16 @@
     "tabs": [
       {
         "tab": "Documentation",
-        "icon": "book",
-        "groups": [
-          {
-            "group": "Start Here",
-            "icon": "rocket",
-            "pages": [
-              {
-                "title": "Introduction",
-                "path": "introduction",
-                "icon": "home"
-              },
-              {
-                "title": "Quickstart",
-                "path": "quickstart",
-                "icon": "zap"
-              },
-              {
-                "title": "Components",
-                "path": "components",
-                "icon": "code"
-              }
-            ]
-          },
-          {
-            "group": "Components",
-            "icon": "layers",
-            "pages": [
-              {
-                "title": "Images",
-                "path": "components/images",
-                "icon": "image"
-              },
-              {
-                "title": "Cards",
-                "path": "components/cards",
-                "icon": "square"
-              },
-              {
-                "title": "Code",
-                "path": "components/code",
-                "icon": "code"
-              },
-              {
-                "title": "Callouts",
-                "path": "components/callouts",
-                "icon": "message-square"
-              },
-              {
-                "title": "Steps",
-                "path": "components/steps",
-                "icon": "list-ordered"
-              },
-              {
-                "title": "Tabs",
-                "path": "components/tabs",
-                "icon": "columns"
-              }
-            ]
-          }
-        ]
+        "icon": "book"
       },
       {
         "tab": "API Reference",
         "icon": "code",
         "groups": [
           {
-            "group": "Overview",
-            "icon": "file-text",
-            "pages": [
-              {
-                "title": "Authentication",
-                "path": "authentication",
-                "icon": "lock"
-              }
-            ]
-          },
-          {
-            "group": "Sample Endpoints",
-            "openapi": "openapi.yaml"
+            "group": "Bloqr API",
+            "pages": [],
+            "openapi": "https://api.bloqr.dev/api/openapi.json"
           }
         ]
       },
@@ -107,23 +38,13 @@
             "group": "FAQs",
             "icon": "help-circle",
             "expandable": false,
-            "pages": [
-              {
-                "title": "Documentation Source",
-                "path": "help-center/faq/getting-started"
-              }
-            ]
+            "pages": []
           },
           {
             "group": "Troubleshooting",
             "icon": "alert-triangle",
             "expandable": false,
-            "pages": [
-              {
-                "title": "Page Missing in Sidebar",
-                "path": "help-center/troubleshooting/install-error"
-              }
-            ]
+            "pages": []
           },
           {
             "group": "Guides",
@@ -149,6 +70,27 @@
           }
         ]
       }
+    ]
+  },
+  "title": "Bloqr Doqs",
+  "description": "Bloq is always hard at work keeping Bloqr Doqs up to date.",
+  "seo": {
+    "jsonld": {
+      "organization": {
+        "legalName": "Bloqr Systems",
+        "url": "https://bloqr.dev",
+        "name": "Bloqr AI"
+      }
+    }
+  },
+  "ai": {
+    "page-actions": [
+      "copy",
+      "download-pdf",
+      "view",
+      "claude",
+      "chatgpt",
+      "mcp"
     ]
   }
 }
