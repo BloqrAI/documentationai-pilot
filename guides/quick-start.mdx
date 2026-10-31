@@ -1,0 +1,280 @@
+---
+title: Quick Start
+description: Get the Bloqr Compiler running in minutes with Docker, Deno, or Cloudflare Workers.
+---
+
+Get the Bloqr Compiler up and running in minutes with your preferred runtime.
+
+## Prerequisites
+
+- Git installed locally
+- <strong>Docker path:</strong> Docker + Docker Compose
+- <strong>Deno / Workers path:</strong> Deno installed (`deno --version`)
+- <strong>Workers deploy:</strong> Cloudflare account + Wrangler auth (`deno task wrangler login`)
+
+## Installation Methods
+
+<Tabs>
+  <Tab title="Docker">
+    ## Quick Start
+
+    <Steps>
+      <Step title="Clone the repository">
+        ```bash
+        git clone https://github.com/bloqr-systems/bloqr-compiler.git
+        cd bloqr-compiler
+        ```
+      </Step>
+
+      <Step title="Start with Docker Compose">
+        ```bash
+        docker compose up -d
+        ```
+      </Step>
+
+      <Step title="Access the application">
+        | Surface | URL |
+        | --- | --- |
+        | Web UI | [http://localhost:8787](http://localhost:8787) |
+        | API Documentation | [http://localhost:8787/api](http://localhost:8787/api) |
+        | Test Interface | [http://localhost:8787/test.html](http://localhost:8787/test.html) |
+        | Metrics | [http://localhost:8787/metrics](http://localhost:8787/metrics) |
+      </Step>
+    </Steps>
+
+    <Callout kind="tip">
+      That's it! The compiler is now running. For advanced configuration see the sections below.
+    </Callout>
+
+    ## Managing the Container
+
+    <Steps>
+      <Step title="View logs">
+        ```bash
+        docker compose logs -f
+        ```
+      </Step>
+
+      <Step title="Stop the container">
+        ```bash
+        docker compose down
+        ```
+      </Step>
+
+      <Step title="Restart the container">
+        ```bash
+        docker compose restart
+        ```
+      </Step>
+
+      <Step title="Update the container">
+        ```bash
+        git pull
+        docker compose down
+        docker compose build --no-cache
+        docker compose up -d
+        ```
+      </Step>
+    </Steps>
+
+    ## Configuration
+
+    ### Environment Variables
+
+    Copy the example environment file and customize:
+
+    ```bash
+    cp .env.example .env
+    # Edit .env with your preferred settings
+    ```
+
+    Available variables:
+
+    - `COMPILER_VERSION`: Version identifier (default: 0.6.0)
+    - `PORT`: Server port (default: 8787)
+    - `DENO_DIR`: Deno cache directory (default: /app/.deno)
+
+    ### Custom Port
+
+    To run on a different port, edit `docker-compose.yml`:
+
+    ```yaml
+    ports:
+        - '8080:8787' # Runs on port 8080 instead
+    ```
+
+    ## Development Mode
+
+    For active development with live reload:
+
+    ```bash
+    # Source code is already mounted in docker-compose.yml
+    docker compose up
+    ```
+
+    Changes to files in `src/`, `worker/`, and `public/` will be reflected automatically.
+  </Tab>
+
+  <Tab title="Deno (Native)">
+    ## Quick Start
+
+    <Steps>
+      <Step title="Clone and enter the repository">
+        ```bash
+        git clone https://github.com/bloqr-systems/bloqr-compiler.git
+        cd bloqr-compiler
+        ```
+      </Step>
+
+      <Step title="Run the development task">
+        ```bash
+        deno task dev
+        ```
+      </Step>
+
+      <Step title="Open local endpoints">
+        | Surface | URL |
+        | --- | --- |
+        | Web UI | [http://localhost:8787](http://localhost:8787) |
+        | API Documentation | [http://localhost:8787/api](http://localhost:8787/api) |
+        | Metrics | [http://localhost:8787/metrics](http://localhost:8787/metrics) |
+      </Step>
+    </Steps>
+
+    <Callout kind="info">
+      **Native runtime mode**
+
+      Use Deno tasks when you want fast iteration on compiler internals without Docker.
+    </Callout>
+  </Tab>
+
+  <Tab title="Cloudflare Workers">
+    ## Quick Start
+
+    <Steps>
+      <Step title="Run the Worker locally">
+        ```bash
+        deno task wrangler:dev
+        ```
+      </Step>
+
+      <Step title="Compile against local Worker endpoints">
+        ```bash
+        curl -X POST http://localhost:8787/compile \
+          -H "Content-Type: application/json" \
+          -d '{"configuration":{"name":"Workers Mode","sources":[{"source":"https://example.com/filters.txt"}]}}'
+        ```
+      </Step>
+
+      <Step title="Deploy to Cloudflare">
+        ```bash
+        deno task wrangler:deploy
+        ```
+      </Step>
+    </Steps>
+
+    <Callout kind="tip">
+      **Production path**
+
+      Cloudflare Workers mode matches the edge runtime used in production.
+    </Callout>
+  </Tab>
+</Tabs>
+
+## Example Usage
+
+### Using the Web UI
+
+1. Open [http://localhost:8787](http://localhost:8787) in your browser
+2. Switch to "Simple Mode" or "Advanced Mode"
+3. Add filter list URLs or paste a configuration
+4. Click "Compile" and watch the real-time progress
+5. Download or copy the compiled filter list
+
+### Using the API
+
+Compile a filter list programmatically:
+
+```bash
+curl -X POST http://localhost:8787/compile \
+  -H "Content-Type: application/json" \
+  -d '{
+    "configuration": {
+      "name": "My Filter List",
+      "sources": [
+        {
+          "source": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
+          "transformations": ["RemoveComments", "Deduplicate"]
+        }
+      ],
+      "transformations": ["RemoveEmptyLines"]
+    }
+  }'
+```
+
+### Streaming Compilation **SSE**
+
+Get real-time progress updates using Server-Sent Events:
+
+```bash
+curl -N -X POST http://localhost:8787/compile/stream \
+  -H "Content-Type: application/json" \
+  -d '{
+    "configuration": {
+      "name": "My Filter List",
+      "sources": [{"source": "https://example.com/filters.txt"}]
+    }
+  }'
+```
+
+## Troubleshooting
+
+<Callout kind="alert">
+  **Port already in use**
+
+  If port 8787 is already in use, stop the conflicting service or change the port in
+  `docker-compose.yml` before running `docker compose up -d`.
+</Callout>
+
+### Container Won't Start
+
+Check the logs:
+
+```bash
+docker compose logs
+```
+
+### Permission Issues
+
+If you encounter permission errors with volumes:
+
+```bash
+sudo chown -R 1001:1001 ./output
+```
+
+## Next Steps
+
+<Columns cols={2}>
+  <Card title="Complete Docker Guide" href="/deployment/docker">
+    Advanced configurations, health checks, and Kubernetes examples.
+  </Card>
+
+  <Card title="API Documentation" href="/api/readme">
+    Full REST API reference with schemas and examples.
+  </Card>
+
+  <Card title="Configuration Reference" href="/usage/configuration">
+    All compiler options and Zod schema reference.
+  </Card>
+
+  <Card title="Troubleshooting" href="/guides/troubleshooting">
+    Common issues and KB articles for production incidents.
+  </Card>
+</Columns>
+
+<Callout kind="info">
+  <strong>Need help?</strong>
+
+  - **GitHub Issues**: [https://github.com/bloqr-systems/bloqr-compiler/issues](https://github.com/bloqr-systems/bloqr-compiler/issues)
+  - **Docs**: See the [Complete Docker Guide](/deployment/docker) and [API Reference](/api/readme)
+</Callout>

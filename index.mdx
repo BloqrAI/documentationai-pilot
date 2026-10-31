@@ -1,0 +1,120 @@
+---
+title: Bloqr™ Documentation
+description: Adblock filter-list compiler-as-a-service — reference, guides, and architecture.
+---
+
+<Callout kind="tip">
+  <strong>What is Bloqr?</strong>
+
+  Bloqr helps clean up your internet by blocking ads, trackers, and unsafe domains before they load.
+  Pick what you want blocked, and Bloqr keeps it updated for you.
+</Callout>
+
+## Platform Snapshot
+
+- **50+ Filter Sources**: Multi-source ingestion across community and managed lists.
+- **11 Transformations**: Deterministic pipeline stages for cleanup, normalization, and optimization.
+- **Zero-Copy Streaming**: SSE and WebSocket delivery for live compile telemetry.
+- **Edge-Native Runtime**: Cloudflare Workers, Queues, D1, R2, and Workflows by default.
+
+## Quick Paths by Role
+
+<Tabs>
+  <Tab title="End User">
+    <Columns cols={2}>
+      <Card title="Getting Started" href="/help/getting-started">
+        Get Bloqr running in a few simple steps.
+      </Card>
+
+      <Card title="What Gets Blocked" href="/help/what-gets-blocked">
+        See exactly what Bloqr protects you from.
+      </Card>
+
+      <Card title="Setup Your Device" href="/help/setup-your-device">
+        Use Bloqr on phone, computer, or router.
+      </Card>
+
+      <Card title="FAQ" href="/help/faq">
+        Answers to common questions in plain language.
+      </Card>
+    </Columns>
+  </Tab>
+
+  <Tab title="Developer">
+    <Columns cols={2}>
+      <Card title="Quick Start" href="https://docs.bloqr.dev/guides/quick-start">
+        Bootstrap local development in minutes.
+      </Card>
+
+      <Card title="Usage: Configuration" href="https://docs.bloqr.dev/usage/configuration">
+        Compiler schema, defaults, and examples.
+      </Card>
+
+      <Card title="Development Architecture" href="https://docs.bloqr.dev/development/architecture">
+        Core architecture and extension points.
+      </Card>
+
+      <Card title="Testing Guide" href="https://docs.bloqr.dev/testing/testing">
+        Unit, integration, and E2E execution patterns.
+      </Card>
+    </Columns>
+  </Tab>
+
+  <Tab title="Ops / Admin">
+    <Columns cols={2}>
+      <Card title="Deployment" href="/deployment/readme">
+        Production deployment strategy and controls.
+      </Card>
+
+      <Card title="Admin System" href="/admin/readme">
+        RBAC controls, plans, and audit capabilities.
+      </Card>
+
+      <Card title="Observability" href="/observability/readme">
+        Tracing, metrics, and incident telemetry.
+      </Card>
+
+      <Card title="Troubleshooting" href="/troubleshooting/readme">
+        Production KBs and remediation playbooks.
+      </Card>
+    </Columns>
+  </Tab>
+
+  <Tab title="API Consumer">
+    <Columns cols={2}>
+      <Card title="API Overview" href="https://docs.bloqr.dev/api/readme">
+        Endpoints, request schemas, and examples.
+      </Card>
+
+      <Card title="Streaming API" href="https://docs.bloqr.dev/api/streaming_api">
+        Live compile status with SSE/WebSockets.
+      </Card>
+
+      <Card title="API Authentication" href="https://docs.bloqr.dev/auth/api-authentication">
+        JWT and API-key auth flows.
+      </Card>
+
+      <Card title="Client Libraries" href="https://docs.bloqr.dev/guides/clients">
+        Integrate quickly from your app stack.
+      </Card>
+    </Columns>
+  </Tab>
+</Tabs>
+
+## Start in Minutes
+
+1. Pick your path above.
+2. Follow the setup guide for your role.
+3. Launch with confidence.
+
+## Bloqr Properties
+
+| Property | URL | Runtime | Notes |
+| --- | --- | --- | --- |
+| **Landing** | [bloqr.dev](https://bloqr.dev/) | Marketing | Main product narrative and launch funnel. |
+| **App** | [app.bloqr.dev](https://app.bloqr.dev/) | Angular | Interactive compiler dashboard and admin UX. |
+| **API** | [api.bloqr.dev](https://api.bloqr.dev/) | Worker | OpenAPI portal and API base URL: `https://api.bloqr.dev/api`. |
+| **Docs** | [docs.bloqr.dev](https://docs.bloqr.dev/) | Astro | Starlight documentation for developers and operators. |
+
+[Explore Guides](/guides/readme)
+[Start as an End User](/help/getting-started)

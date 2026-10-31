@@ -1,0 +1,161 @@
+---
+title: Sentry Operations Runbook
+description: How Sentry is wired across Bloqr today, how to release with working stack traces, and what was deliberately not done. Written after the October 2026...
+---
+
+# Sentry Operations Runbook
+
+How Sentry is wired across Bloqr today, how to release with working stack traces, and what was
+deliberately **not** done. Written after the October 2026 observability audit; see
+[Sentry Integration](/observability/sentry) for the original SDK setup and
+[Best Practices](/observability/sentry-best-practices) for general guidance.
+
+---
+
+## 1\. Projects and DSNs
+
+One Sentry project per deployable, all in org `bloqr-ai` (US region, `sentry.io`).
+
+| Project | What reports | DSN lives in |
+| --- | --- | --- |
+| `bloqr-backend` | `bloqr-backend` Worker: fetch/queue/scheduled handlers, Durable Objects, Workflows | Worker secret `SENTRY_DSN` |
+| `bloqr-frontend` | Angular app in the browser **and** the `bloqr-frontend` SSR Worker | Worker secret `SENTRY_DSN` (the Worker also serves it to the browser) |
+| `bloqr-tail` | exceptions forwarded by the `bloqr-tail` Worker | Worker secret `SENTRY_DSN` |
+| `bloqr-mail` | inbound email Worker | Worker secret `SENTRY_DSN` |
+| `bloqr-landing` | marketing site (browser only) | constant in `bloqr-landing/src/config.ts` (public) |
+
+<strong>The browser gets the *frontend* DSN only.</strong> `GET app.bloqr.dev/api/sentry-config` is answered by the
+frontend Worker with its own `SENTRY_DSN`. `GET api.bloqr.dev/api/sentry-config` serves
+`SENTRY_FRONTEND_DSN` and **never** the backend DSN: the route is public, and exposing the server
+project's DSN would let anyone inject events into it.
+
+Per-key rate limits are not available on the current Sentry plan (the API accepts and ignores them).
+Abuse protection for the public DSNs is therefore: `allowedDomains` on `bloqr-frontend` /
+`bloqr-landing`, inbound filters, and Sentry's spike protection.
+
+---
+
+## 2\. Privacy
+
+Bloqr is a privacy product; nothing identifying should reach Sentry.
+
+- <strong>Sentry side (org + every project):</strong> data scrubber, default scrubbers and IP scrubbing are on, plus
+  a list of sensitive field names (`token`, `code`, `flash`, `email`, `session`, ...).
+- <strong>SDK side (defence in depth):</strong> every SDK uses `sendDefaultPii: false` and scrubs events before send:
+  `worker/utils/sentry-scrub.ts` (Workers), `frontend/src/app/sentry-scrub.ts` (Angular),
+  `bloqr-landing/src/lib/sentry-client.ts` (landing). Query-string **values** are replaced with
+  `[Filtered]` everywhere in an event (request, breadcrumbs, spans, trace context, nested text);
+  keys and a small allow-list (`page`, `limit`, `format`, ...) are kept.
+- The scrubbers are deliberately resilient: SDK internals can expose accessor-only members, and one
+  such member must never abort scrubbing of the rest of the event. Tests cover this.
+- **Replay** (Angular app only) masks all text, inputs and media. The landing site has no Replay.
+- The tail worker's Sentry path scrubs URLs too; the Grafana exporter is separately sanitized.
+
+---
+
+## 3\. What gets reported
+
+| Source | Mechanism |
+| --- | --- |
+| Unhandled exceptions in handlers | `withSentryWorker` (`worker/services/sentry-init.ts`) |
+| **Handled** 5xx in `app.onError` | `captureHandledError`, tagged with correlation fields; 4xx are skipped. `honoIntegration` is **not** used: it only fires when the exported handler *is* the Hono app, and ours is a wrapper object |
+| Durable Objects, Workflows | `instrumentDurableObject` / `instrumentWorkflow` (`worker/services/sentry-instrument.ts`) so events have real stack frames. The two Agents-SDK classes and the Container keep their own entry points |
+| D1 queries | `instrumentD1WithSentry` on `DB` / `ADMIN_DB` |
+| Scheduled runs | Sentry Crons check-ins (`bloqr-backend-cron-*`) |
+| Worker warnings/errors | Sentry Logs (`console.warn/error` only; full logs live in Loki) |
+| Zod validation errors | `zodErrorsIntegration` |
+| Browser errors, release health | `@sentry/angular` with `browserSessionIntegration` |
+| CSP violations | the frontend Worker forwards **scrubbed** `/api/csp-report` bodies to Sentry's security endpoint |
+
+Trace sampling is route-aware (`worker/services/sentry-options.ts`): probes and static assets are
+never traced, scheduled runs always, `/api/compile|auth|stripe|webhooks|workflows` at 50 %, the rest
+at 10 %, and an upstream sampling decision is always honored.
+
+---
+
+## 4\. Alerting
+
+Slack alert actions are **not available** on the current Sentry plan (only email and Sentry apps). The
+older per-project "bloqr-\*" Slack workflows are stored but cannot be edited and should be treated as
+inactive. Current workflows (all email, to issue owners / active members):
+
+- **Bloqr: new, regressed or reappeared issue** \- every project, uptime monitors and cron monitors.
+- <strong>Bloqr: error spike (>10 events/min)</strong> \- every project.
+- The default "high priority issue" workflows.
+
+Uptime monitors (60 s): `api.bloqr.dev/api/health`, `app.bloqr.dev`, `bloqr.dev`.
+Cron monitors: `bloqr-backend-cron-0` (hourly), `-0-4` (every 4 h), `-0-6` (every 6 h).
+
+Metrics-style alerting stays in Grafana (`BloqrAI/bloqr-artifacts`, `grafana/`), which owns Worker
+error-rate, 5xx, CPU and telemetry-silence alerts; Sentry owns issue-based alerts.
+
+---
+
+## 5\. Releasing with working stack traces
+
+Sentry resolves minified frames with **debug IDs injected into the exact artifact that is deployed**.
+Building twice (one for maps, one for deploy) produces different IDs and unreadable traces, so one script
+does the whole sequence and deploys the output it just injected:
+
+```bash
+# bloqr-compiler: backend Worker, or the Angular frontend + SSR Worker
+scripts/sentry-release.sh backend  --deploy
+scripts/sentry-release.sh frontend --deploy     # also needs CF_WEB_ANALYTICS_TOKEN (as CI does)
+
+# bloqr-landing
+scripts/sentry-release.sh --deploy
+```
+
+Each script: builds with source maps, injects debug IDs, uploads the maps to the release, **deletes the
+maps and `sourceMappingURL` comments from the deployable output** (maps are never served), deploys that
+output, associates commits, finalizes the release and records the deploy. Needs `SENTRY_AUTH_TOKEN`
+(`project:releases`), Cloudflare credentials with R2 access for the backend, and Node >= 22.22.3.
+
+Notes learned the hard way:
+
+- The backend deploy bundles with `wrangler deploy --dry-run --outdir`, then deploys the injected bundle
+  with `no_bundle` \+ `find_additional_modules` (a Prisma WASM module rides along).
+- The frontend script must run `postbuild` (it does): `build:sentry` does not trigger the npm hook, and
+  without it the deployed `index.html` differs from CI's.
+- The landing adapter auto-adds an id-less `SESSION` KV binding that makes `wrangler deploy` try to
+  create an existing namespace (error 10014). The landing CI deploy job now runs the same script
+  (`scripts/sentry-release.sh --deploy`), so CI and local deploys behave identically.
+- CI deploys (`ci.yml` `deploy`, `deploy-frontend`) run `scripts/sentry-release.sh` whenever the
+  `SENTRY_AUTH_TOKEN` secret exists, so the artifact that gets debug IDs is the one deployed. Without the
+  secret they fall back to the plain `wrangler deploy`. `sentry-worker.yml` / `sentry-frontend.yml` are now
+  manual-only fallbacks (their separate builds never matched production). First CI run after this change
+  is the real proof: check a release's artifacts in Sentry and send one test exception.
+
+<strong>Verifying symbolication:</strong> send an event whose frame points into the deployed bundle with its
+`debug_meta` image (type `sourcemap`, the bundle's debug ID) and confirm the frame resolves to a source
+path with context. This was done for the backend; the first real exception is the final proof.
+
+---
+
+## 6\. CSP reports as a signal
+
+`report-sample` is part of `script-src`, so reports carry the script prefix. This surfaced real bugs
+the day it shipped: inline scripts that blocked the beta banner's Dismiss button, Replay's `blob:`
+worker, and Angular's inline event-replay script. Fixes use hashes (computed by `postbuild.js` into
+`_headers` and per SSR response in `server.ts`), never `'unsafe-inline'`.
+
+Reports the forwarder drops on purpose: Cloudflare's edge-injected bot-detection snippet
+(`__CF$cv$params`) and Zod's `new Function('')` capability probe (harmless, try/catch-guarded; this Zod
+version runs it even with `jitless`).
+
+<strong>Open item for the owner:</strong> a Google tag (`window.dataLayer`, `(function(w,i,g){...`) is injected at the
+Cloudflare edge into `app.bloqr.dev` and blocked by the CSP. If analytics on the app is wanted, decide
+between allow-listing it deliberately or disabling the edge injection for that hostname.
+
+---
+
+## 7\. Decisions not taken
+
+- <strong>Cloudflare OTLP destinations (`sentry-logs`, `sentry-traces`) are not created.</strong> The Worker
+  configs reference them but the account has none. A destination maps to a single Sentry project, so
+  creating them would export 100 % of every Worker's logs and traces into one project, duplicating the
+  SDK's scrubbed traces and the Loki feed, and bypassing the scrubbers (request URLs would arrive with
+  query strings). Revisit only with a per-service design and a scrubbing story.
+- <strong>2FA is not enforced org-wide.</strong> It would lock out members who have not enrolled; enforce deliberately.
+- <strong>Sentry AI features (Seer)</strong> are off (`genAIConsent`); enabling them is a product/privacy decision.
+- <strong>`honoIntegration`</strong> is inapplicable (see section 3).

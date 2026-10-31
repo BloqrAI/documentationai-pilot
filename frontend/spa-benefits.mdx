@@ -1,0 +1,93 @@
+---
+title: SPA Benefits Analysis — Bloqr Compiler
+description: This document originally analyzed migrating the old static public/.html multi-page app (a Vue-candidate MPA with pages like index.html, compiler.html,...
+---
+
+# SPA Benefits Analysis — Bloqr Compiler
+
+## Question: Would This App Benefit From Being a Single Page Application?
+
+<strong>Short answer: No — this migration already happened, and going further (dropping
+SSR) would be a regression.</strong>
+
+This document originally analyzed migrating the old static `public/*.html`
+multi-page app (a Vue-candidate MPA with pages like `index.html`,
+`compiler.html`, `admin-storage.html`) to a Vue 3 SPA. That MPA no longer
+exists. The frontend is now Angular 22, and the SPA migration this document
+proposed already happened — just onto Angular instead of Vue. See
+[`ANGULAR_PARITY_CHECKLIST.mdx`](/frontend/angular-parity-checklist) for the
+page-by-page migration record and [`ANGULAR_FRONTEND.mdx`](/frontend/angular-frontend)
+for the current architecture.
+
+The remaining question isn't "MPA vs. SPA" — it's whether the current app
+should drop server-side rendering entirely in favor of a pure client-rendered
+SPA. It shouldn't.
+
+---
+
+## Current Architecture: A Hybrid, Not a Monolith
+
+The frontend already runs a **per-route rendering strategy** on Cloudflare
+Workers via `@angular/ssr`'s `AngularAppEngine` (see `frontend/src/server.ts`
+and `frontend/src/app/app.routes.server.ts`), not "SSR everywhere":
+
+| Route(s) | Mode | Why |
+| --- | --- | --- |
+| `/` (Home), `/api-docs` | `Prerender` (SSG) | Static content — built once, served from Cloudflare's CDN with **zero Worker invocations** |
+| `/compiler`, `/performance`, `/admin`, etc. | `Server` (SSR per request) | Dynamic, request-specific content |
+| `/sign-in`, `/sign-up`, `/validation`, `/api-keys` | `Client` (CSR) | Auth state (Better Auth) only exists in the browser — SSR is not possible here |
+
+This hybrid already captures the two things a full SPA migration would chase:
+
+- **Instant, client-driven interactivity where it matters** — the
+  auth-gated and user-specific routes are already pure CSR today.
+- **Fast, cheap, SEO-friendly delivery where it matters** — the public
+  Home and API docs pages are prerendered once and served free from the CDN,
+  with no Worker cold start and no client-side blank-shell wait.
+
+A full SPA migration would give up the second bullet to chase the first one
+everywhere, including on the two pages (Home, API docs) that benefit most
+from SSG.
+
+---
+
+## Why Not Go Further Toward a Pure SPA
+
+1. <strong>Prerendered pages would regress.</strong> Home and API docs are served
+   directly from the CDN today with no Worker invocation. Moving to a CSR-only
+   SPA means every visit pays a blank-shell → hydrate → render cost that
+   currently doesn't exist for these routes, and loses SEO-relevant HTML for
+   crawlers that don't execute JS.
+2. <strong>The infrastructure a SPA still needs is already built and is SSR's,
+   not CSR's.</strong> `server.ts`'s `AngularAppEngine` fetch handler is also what
+   proxies `/api/*` to the backend Worker via a same-network service binding
+   (`[[services]] binding = "API"` in `wrangler.toml`) — avoiding a public
+   round trip and CORS entirely. A pure SPA would still need an edge
+   entry point doing this proxying; removing SSR doesn't remove that
+   Worker, it just strips its rendering responsibilities.
+3. <strong>The routes that actually want SPA behavior already have it.</strong>
+   `sign-in`, `sign-up`, `validation`, and `api-keys` are `RenderMode.Client`
+   today specifically because Better Auth needs browser-only session state.
+   There's no remaining category of route that wants CSR and isn't already
+   CSR.
+4. <strong>Angular's per-route render mode is strictly more flexible than a
+   framework-wide SPA/MPA choice.</strong> Reverting to "one mode for everything"
+   (SPA) is a step backward in flexibility compared to what's already
+   configured.
+
+---
+
+## Recommendation
+
+Keep the current hybrid Prerender / Server / Client model. If a specific
+page feels slow or a specific workflow feels janky, that's a targeted
+`RenderMode` change for that route (or a Workers deployment/caching issue),
+not a reason to rip out SSR project-wide.
+
+---
+
+## Related Documentation
+
+- [`ANGULAR_FRONTEND.mdx`](/frontend/angular-frontend) — current frontend architecture, SSR/prerender modes, Cloudflare Workers deployment
+- [`ANGULAR_PARITY_CHECKLIST.mdx`](/frontend/angular-parity-checklist) — record of the legacy MPA → Angular migration
+- `../development/ARCHITECTURE.mdx` — overall system architecture

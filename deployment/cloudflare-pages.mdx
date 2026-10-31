@@ -1,0 +1,219 @@
+---
+title: Cloudflare Pages Deployment Guide
+description: This guide explains how to deploy the Bloqr Compiler UI to Cloudflare Pages.
+---
+
+# Cloudflare Pages Deployment Guide
+
+This guide explains how to deploy the Bloqr Compiler UI to Cloudflare Pages.
+
+## Overview
+
+This project uses **Cloudflare Workers** for the main API/compiler service and **Cloudflare Pages** for hosting the static UI files in the `public/` directory.
+
+## Important: Do NOT use `deno deploy`
+
+⚠️ <strong>Common Mistake:</strong> This project is NOT deployed using `deno deploy`. While this is a Deno-based project, deployment to Cloudflare uses Wrangler, not Deno Deploy.
+
+### Why not Deno Deploy?
+
+- This project targets **Cloudflare Workers** runtime, not Deno Deploy
+- The worker uses Cloudflare-specific bindings (KV, R2, D1, etc.)
+- The deployment is managed through Wrangler CLI
+
+## Deployment Options
+
+### Option 1: Automated Deployment via GitHub Actions (Recommended)
+
+The repository includes automated CI/CD that deploys to Cloudflare Workers and Pages automatically.
+
+See `.github/workflows/ci.yml` for the deployment configuration.
+
+<strong>Requirements:</strong>
+
+- Set repository secrets:
+
+  - `CLOUDFLARE_API_TOKEN`
+  - `CLOUDFLARE_ACCOUNT_ID`
+- Enable deployment by setting repository variable:
+
+  - `ENABLE_CLOUDFLARE_DEPLOY=true`
+
+### Option 2: Manual Deployment
+
+#### Workers Deployment
+
+```bash
+# Install dependencies
+npm install
+
+# Deploy worker
+deno task wrangler:deploy
+# or
+wrangler deploy
+```
+
+#### Angular SPA Deployment (Frontend)
+
+The Angular frontend is deployed as part of the Cloudflare Workers bundle via the Worker's <strong>`ASSETS` binding</strong>, **not** as a standalone Cloudflare Pages project. (The "Cloudflare Pages" sections below cover only the legacy `public/` static UI.) The build process requires a postbuild step because Angular's SSR builder with `RenderMode.Client` emits `index.csr.html` instead of `index.html`:
+
+```bash
+cd frontend
+
+# npm run build automatically runs the postbuild lifecycle hook:
+#   1. ng build  → emits dist/frontend/browser/index.csr.html
+#   2. postbuild → copies index.csr.html to index.html
+npm run build
+
+# Deploy the Worker (which serves the Angular SPA via STATIC_ASSETS binding)
+deno task wrangler:deploy
+```
+
+The postbuild step is handled by `frontend/scripts/postbuild.js`. If you skip the postbuild, the Cloudflare Worker `STATIC_ASSETS` binding falls back to `index.csr.html`, but the recommended path is always to run `npm run build` (not `ng build` directly).
+
+<strong>SPA Routing (Worker):</strong> The Cloudflare Worker already handles SPA fallback — extensionless paths not matched by API routes are served the Angular shell (`index.html`) via the `STATIC_ASSETS` binding. <strong>SPA Routing (Pages-only):</strong> If you deploy the Angular `dist/` output directly to **Cloudflare Pages** instead of serving it via the Worker `STATIC_ASSETS` binding, you can use a `_redirects` file for SPA routing. In that setup, `frontend/src/_redirects` should contain `/* /index.html 200`, and this file is copied into the browser output root during the Angular build via `angular.json`'s `assets` configuration.
+
+#### Pages Deployment (Legacy static UI — Retired)
+
+> <strong>⚠️ Retired:</strong> The `bloqr-backend-ui` Cloudflare Pages project has been retired. The Angular SPA is now served exclusively via the Worker's `[assets]` binding at `https://api.bloqr.dev`. The CI steps that deployed to Pages have been removed.
+
+The command below is kept for historical reference only and should **not** be used:
+
+```bash
+# RETIRED — do not use
+# wrangler pages deploy public --project-name=bloqr-backend-ui
+```
+
+## Cloudflare Pages Dashboard Configuration
+
+If you're setting up Cloudflare Pages through the dashboard, use these settings:
+
+### Build Configuration
+
+| Setting | Value |
+| --- | --- |
+| **Framework preset** | None |
+| **Build command** | `npm install` |
+| **Build output directory** | `public` |
+| **Root directory** | (leave empty) |
+
+### Environment Variables
+
+| Variable | Value |
+| --- | --- |
+| `NODE_VERSION` | `24` |
+
+### ⚠️ Critical: Deploy Command
+
+**DO NOT** set a deploy command to `deno deploy`. This will cause errors because:
+
+1. Deno is not installed in the Cloudflare Pages build environment by default
+2. This project uses Wrangler for deployment, not Deno Deploy
+3. The static files in `public/` don't require any build step
+
+<strong>Correct configuration:</strong>
+
+- <strong>Deploy command:</strong> Leave empty or use `echo "No deploy command needed"`
+- The `public/` directory contains pre-built static files that are served directly
+
+## Common Errors
+
+### Error: `/bin/sh: 1: deno: not found`
+
+<strong>Symptom:</strong>
+
+```
+Executing user deploy command: deno deploy
+/bin/sh: 1: deno: not found
+Failed: error occurred while running deploy command
+```
+
+<strong>Solution:</strong>
+Remove or change the deploy command in Cloudflare Pages dashboard settings:
+
+1. Go to Pages project settings
+2. Navigate to "Builds & deployments"
+3. Under "Build configuration", clear the "Deploy command" field
+4. Save changes
+
+### Error: Build fails with missing dependencies
+
+<strong>Solution:</strong>
+Ensure the build command is set to `npm install` (not `npm run build` or other commands).
+
+## Architecture
+
+```mermaid
+flowchart TB
+    PAGES["Cloudflare Pages"]
+    subgraph STATIC["Static Files (public/)"]
+        I["index.html (Admin Dashboard)"]
+        C["compiler.html (Compiler UI)"]
+        T["test.html (API Tester)"]
+    end
+    WORKERS["Cloudflare Workers"]
+    subgraph WORKER_INNER["Worker (worker/worker.ts)"]
+        API["API endpoints"]
+        SVC["Compiler service"]
+        BINDINGS["KV, R2, D1 bindings"]
+    end
+
+    PAGES --> I
+    PAGES --> C
+    PAGES --> T
+    PAGES -->|calls| WORKERS
+    WORKERS --> API
+    WORKERS --> SVC
+    WORKERS --> BINDINGS
+```
+
+## Verification
+
+After deployment, verify:
+
+1. **Pages URL**: `https://YOUR-PROJECT.pages.dev`
+
+   - Should show the admin dashboard
+   - Should load without errors
+2. **Worker URL**: `https://bloqr-backend.YOUR-SUBDOMAIN.workers.dev`
+
+   - API endpoints should respond
+   - `/api` should return API documentation
+3. **Integration**: The Pages UI should successfully call the Worker API
+
+## Troubleshooting
+
+### Pages deployment works but Worker calls fail
+
+<strong>Cause:</strong> CORS issues or incorrect Worker URL in UI
+
+<strong>Solution:</strong>
+
+1. Check that the Worker URL in the UI matches your deployed Worker
+2. Ensure CORS is configured correctly in `worker/worker.ts`
+3. Verify the Worker is deployed and accessible
+
+### UI shows but API calls return 404
+
+<strong>Cause:</strong> Worker not deployed or incorrect API endpoint
+
+<strong>Solution:</strong>
+
+1. Deploy the Worker: `wrangler deploy`
+2. Update the API endpoint URL in the UI files if needed
+3. Check Worker logs: `wrangler tail`
+
+## Related Documentation
+
+- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
+- [Cloudflare Pages Documentation](https://developers.cloudflare.com/pages/)
+- [Wrangler CLI Documentation](https://developers.cloudflare.com/workers/wrangler/)
+- [GitHub Actions CI/CD](https://github.com/bloqr-systems/bloqr-compiler/blob/main/.github/workflows/ci.yml)
+
+## Support
+
+For issues related to deployment, please:
+
+1. Check this documentation first
+2. Review the [Troubleshooting Guide](/guides/troubleshooting)
+3. Open an issue on GitHub with deployment logs

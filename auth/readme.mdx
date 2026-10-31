@@ -1,0 +1,100 @@
+---
+title: Authentication & Authorization
+description: The bloqr-backend uses Better Auth as its sole authentication provider. Better Auth runs entirely within the Cloudflare Worker, backed by Neon PostgreSQL...
+---
+
+# Authentication & Authorization
+
+The bloqr-backend uses **Better Auth** as its sole authentication provider. Better Auth runs
+entirely within the Cloudflare Worker, backed by Neon PostgreSQL via Cloudflare Hyperdrive and
+the Prisma ORM. No third-party auth service is required at runtime.
+
+## Documentation
+
+| Document | Audience | Description |
+| --- | --- | --- |
+| [Bootstrap Runbook](/auth/bootstrap-runbook) | Operators | Step-by-step: first admin setup, smoke test, API key creation, Postman config |
+| [Better Auth User Guide](/auth/better-auth-user-guide) | All users | Sign-up, sign-in, 2FA, session management, API keys |
+| [Better Auth Admin Guide](/auth/better-auth-admin-guide) | Operators | User management, banning, secret rotation, migrations |
+| [Better Auth Developer Guide](/auth/better-auth-developer-guide) | Developers | Plugin catalogue, adapter swapping, custom providers |
+| [Plugin Extension Pack](/auth/plugin-extension-pack) | Developers / Operators | How to enable each conditional plugin (`apiKey`, `mcp`/`oidcProvider`, `sso`, `scim`, `passkey`, `captcha`), endpoints exposed, schema, and rollout gotchas |
+| [Developer Guide](/auth/developer-guide) | Developers | Architecture overview, IAuthProvider interface, bindings |
+| [Auth Provider Selection](/auth/auth-provider-selection) | All | How provider selection works and how to extend it |
+| [Configuration Guide](/auth/configuration) | Operators / DevOps | Environment variables, secrets, and deployment |
+| [Better Auth Prisma Setup](/auth/better-auth-prisma) | Developers / DevOps | Prisma adapter, Neon, and Hyperdrive configuration |
+| [Social Providers](/auth/social-providers) | Operators | GitHub and Google OAuth setup |
+| [API Authentication](/auth/api-authentication) | API Consumers | How to authenticate API requests programmatically |
+| [Postman Testing](/auth/postman-testing) | Developers / API Consumers | Postman setup for authenticated API testing |
+| [Admin Access](/auth/admin-access) | Operators | Admin endpoint protection and dashboard access |
+| [Cloudflare Access](/auth/cloudflare-access) | Operators / DevOps | Cloudflare Zero Trust Access for admin routes |
+| [CLI Authentication](/auth/cli-authentication) | CLI Users / DevOps | CLI authentication with queue endpoints |
+| [Email Architecture](/auth/email-architecture) | Developers / Operators | Hybrid email delivery: Resend (auth critical) + CF Email Service REST (transactional), provider selector, flows, env setup |
+| [ZTA Review Fixes](/auth/zta-review-fixes) | Developers | ZTA hardening: telemetry, rate-limit, schema, admin fixes |
+| [Removing Anonymous Access](/auth/removing-anonymous-access) | All | Migration plan for mandatory authentication |
+
+> <strong>Deprecated (historical reference only):</strong>
+> [Clerk Setup](/auth/clerk-setup) · [Clerk + Cloudflare Integration](/auth/clerk-cloudflare-integration) · [Migration: Clerk → Better Auth](/auth/migration-clerk-to-better-auth)
+
+---
+
+## Architecture Overview
+
+```mermaid
+flowchart LR
+    FE["Angular Frontend\n(BetterAuthService)"]
+    W["Cloudflare Worker\n(Auth Middleware)"]
+    PG[("Neon PostgreSQL\nvia Hyperdrive\n(users, sessions, accounts)")]
+
+    FE -->|"Session cookie\nor Bearer token"| W
+    W -->|"Session + user lookup\nvia Prisma + Hyperdrive"| PG
+
+    subgraph W["Cloudflare Worker — Auth Chain"]
+        direction TB
+        AK["1. API key verify\nBearer blq_..."]
+        BA["2. Better Auth session verify\ncookie or Bearer token"]
+        AN["3. Anonymous fallback"]
+        TE["Tier enforcement"]
+        SE["Scope enforcement"]
+        RL["Rate limiting"]
+        AK --> TE
+        BA --> TE
+        AN --> TE
+        TE --> SE
+        SE --> RL
+    end
+```
+
+---
+
+## Authentication Methods
+
+The system supports three authentication methods:
+
+1. **Better Auth session** — Cookie or bearer session token. Created on sign-up/sign-in.
+   Supports email+password and GitHub OAuth. Active when a valid session exists in the database.
+2. **API key** — Long-lived programmatic access key (`blq_` prefix). Created via the API keys
+   dashboard. Verified by hashing and database lookup on every request.
+3. **Anonymous** — No credentials. Lowest rate limits. Access to public endpoints only.
+
+---
+
+## Tier System
+
+| Tier | Rate Limit | Description |
+| --- | --- | --- |
+| `anonymous` | 10 req/min | Unauthenticated — public endpoints only |
+| `free` | 60 req/min | Registered user — standard access |
+| `pro` | 300 req/min | Paid subscriber — higher limits |
+| `admin` | Unlimited | Administrator — full system access |
+
+Tiers are resolved from the database `user.tier` field on every request. They are never
+trusted from JWT claims (Zero Trust principle).
+
+---
+
+## Quick Links
+
+- **Better Auth Docs**: [better-auth.com/docs](https://www.better-auth.com/docs)
+- **Cloudflare Hyperdrive**: [developers.cloudflare.com/hyperdrive](https://developers.cloudflare.com/hyperdrive/)
+- **Neon PostgreSQL**: [neon.tech](https://neon.tech)
+- **Cloudflare Access**: [Cloudflare Zero Trust](https://one.dash.cloudflare.com)

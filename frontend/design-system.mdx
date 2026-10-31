@@ -1,0 +1,46 @@
+---
+title: Design System (Filter)
+description: The npm package name stays @bloqr/design-system; naming the package after the system would collide with the @bloqr scope's other packages, so only the...
+---
+
+# Design System (Filter)
+
+**Filter** is the official name of the Bloqr design system. It is the single source of truth for all Bloqr visual brand assets — colors, typography, spacing, fonts, logos, and React component primitives — and every UI-bearing Bloqr repository must consume it.
+
+The npm package name stays `@bloqr/design-system`; naming the package after the system would collide with the `@bloqr` scope's other packages, so only the human-facing name changed, not the package or repo identifiers.
+
+## Source of truth
+
+Filter is published from [`Bloqr-Systems/bloqr-design-system`](https://github.com/Bloqr-Systems/bloqr-design-system):
+
+- `styles.css` — global CSS entry point covering all tokens and `@font-face` declarations
+- `tokens/colors.css`, `tokens/typography.css`, `tokens/spacing.css`, `tokens/effects.css` — CSS custom properties
+- `components/` — React primitives (Button, Badge, Tag, Mark, Logo, Icon, Input, Card, CodeWindow)
+- `assets/` — logos, favicon, OG image
+- `fonts/` — self-hosted Space Grotesk variable font files
+- `guidelines/BLOQR_BRAND_HANDOFF.md` — full visual design spec, canonical `:root` block
+- `FILTER_INTEGRATION.md` — per-repo integration steps
+
+## Status in this repo
+
+`frontend/` runs **Angular Material 3** (`@angular/material`), themed via Material's "system-level variables" CSS custom-property API. `@bloqr/design-system` (currently `^1.2.0`) is published to npm and adopted:
+
+1. ~~Install `@bloqr/design-system` as a dependency for tokens~~ **done**
+2. ~~Import Filter's CSS custom properties into component stylesheets~~ **done** — `frontend/src/styles.css` imports Filter's CSS tokens (see [PR #2283](https://github.com/BloqrAI/bloqr-compiler/pull/2283) for the fix switching this from the full `styles.css` bundle to individual `tokens/*.css` imports: Angular's build pipeline does not fully resolve the bundle's own nested `@import` statements, so it must import each token file directly). This docs site (`docs/src/styles/custom.css`) uses the same individual-import pattern
+3. <del>Self-host fonts from Filter instead of `@fontsource`</del> **done** — Filter self-hosts Space Grotesk, Inter, and JetBrains Mono; the `@fontsource/*` dependencies have been removed entirely
+4. Reimplement Angular Material components against Filter's CSS custom properties — **done for the root token layer and matching component-level rules**; every `--mat-sys-*`/`--color-*`/`--app-*` token that had a matching Filter value now references it directly. The `[data-theme='light']` override block deliberately keeps its own manually WCAG-tuned palette rather than aliasing Filter's light theme (see `frontend/src/styles.css`'s own comments for why)
+
+Icons are no longer part of the gap either: Material Symbols (the ligature icon font) has been fully replaced with self-hosted Lucide icons — see `frontend/src/app/components/icon/icon.component.ts` (`<app-icon>`). There is no `material-symbols` npm dependency and no icon font/network request at runtime.
+
+See `AGENTS.md`'s Design System section (repo root) for the current, authoritative migration status and documented exceptions.
+
+## Rules
+
+| Must do | Must not do |
+| --- | --- |
+| Import Filter's individual `tokens/*.css` files directly in this docs site (and in `frontend/`, per [PR #2283](https://github.com/BloqrAI/bloqr-compiler/pull/2283)) — never the full `@bloqr/design-system/styles.css` bundle: its own nested `@import` statements can go unresolved depending on the consuming build's CSS pipeline (confirmed in Angular's build; verified NOT to reproduce in Astro/Vite's, but kept consistent here anyway) | Hardcode hex color values in CSS or TypeScript |
+| Use `var(--color-*)`, `var(--space-*)`, `var(--font-*)` tokens | Recreate `theme/`, `brand/`, or `design/` folders |
+| Reference logos and fonts only via `@bloqr/design-system` exports | Load fonts from Google Fonts CDN |
+| Refer to the design system as "Filter" in docs and comments | Set any background to white or any light colour |
+
+See `AGENTS.md` (repo root) for the full set of mandatory rules.

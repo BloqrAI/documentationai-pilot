@@ -1,0 +1,51 @@
+---
+title: Observability
+description: This section covers the full observability stack for bloqr-backend, from edge-level Cloudflare native tools to application-level error tracking with Sentry.
+---
+
+# Observability
+
+This section covers the full observability stack for `bloqr-backend`, from
+edge-level Cloudflare native tools to application-level error tracking with Sentry.
+
+## Contents
+
+| Document | What it covers |
+| --- | --- |
+| [Sentry Integration](/observability/sentry) | Error tracking, performance tracing, Worker wrapper, Frontend RUM (Phase 3), environment variables |
+| [Cloudflare Native Observability](/observability/cloudflare-observability) | Workers Logs, Traces, Analytics Engine, Tail Worker, Logpush |
+| [Prometheus Metrics](/observability/prometheus) | `/metrics/prometheus` scrape endpoint, Analytics Engine SQL queries, Grafana |
+| [Logpush → R2](/observability/logpush) | Long-term log retention via Cloudflare Logpush to R2 (Phase 1c) |
+| [Custom Providers](/observability/providers) | How to add a custom `IDiagnosticsProvider` backend via `registerDiagnosticsProvider()` |
+
+## Observability layers
+
+```mermaid
+flowchart TD
+    request["Inbound request"] --> edge["Cloudflare Edge<br/>WAF • Rate Limiting • Turnstile • Bot Score"]
+    edge --> worker["Cloudflare Worker"]
+    worker --> sentry["withSentryWorker() -> Sentry (error tracking)"]
+    worker --> analytics["AnalyticsService -> Analytics Engine (metrics)"]
+    worker --> logs["AdminLogger -> Workers Logs (structured)"]
+    worker --> traces["withAdminTracing() -> CF Traces (spans)"]
+    worker --> tail["Tail Worker"]
+    tail --> slack["formatSlackAlert() -> Slack (critical errors)"]
+    tail --> sink["forwardToLogSink() -> Logtail / Better Stack"]
+    tail --> kv["TAIL_LOGS KV -> Short-term log persistence"]
+```
+
+## Quick environment variable reference
+
+| Variable | Layer | Required | Set via |
+| --- | --- | --- | --- |
+| `SENTRY_DSN` | Worker + Tail + Frontend RUM | Optional | `wrangler secret put SENTRY_DSN` |
+| `SENTRY_RELEASE` | Worker (deploy-time var) | Optional (source map linking) | `wrangler deploy --var SENTRY_RELEASE:$(git rev-parse HEAD)` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Worker | Optional (OpenTelemetry traces) | `wrangler secret put OTEL_EXPORTER_OTLP_ENDPOINT` |
+| `ANALYTICS_ACCOUNT_ID` | Worker | Optional (Prometheus) | `wrangler secret put ANALYTICS_ACCOUNT_ID` |
+| `ANALYTICS_API_TOKEN` | Worker | Optional (Prometheus) | `wrangler secret put ANALYTICS_API_TOKEN` |
+| `SLACK_WEBHOOK_URL` | Tail Worker | Optional | `wrangler secret put SLACK_WEBHOOK_URL` (tail worker) |
+| `LOG_SINK_URL` | Tail Worker | Optional | `wrangler secret put LOG_SINK_URL` (tail worker) |
+| `LOG_SINK_TOKEN` | Tail Worker | Optional | `wrangler secret put LOG_SINK_TOKEN` (tail worker) |
+| `SENTRY_AUTH_TOKEN` | CI only | Optional (source maps) | `gh secret set SENTRY_AUTH_TOKEN` |
+| `SENTRY_ORG` | CI only | Optional (source maps) | `gh variable set SENTRY_ORG` |
+| `SENTRY_PROJECT` | CI only | Optional (source maps) | `gh variable set SENTRY_PROJECT` |

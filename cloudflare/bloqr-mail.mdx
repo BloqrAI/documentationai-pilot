@@ -1,0 +1,195 @@
+---
+title: Bloqr Mail (bloqr-mail Worker)
+description: "Source: worker/mail/ in this repo (mail-worker.ts, wrangler.toml, tests). Deployed as its own Cloudflare Worker script, bloqr-mail — separate from the main..."
+---
+
+# Bloqr Mail (`bloqr-mail` Worker)
+
+> <strong>Status: placeholder.</strong> Every inbound message is currently rejected with a clear
+> "not live yet" bounce. This document describes the DNS/Email Routing setup that's
+> already live, why the worker exists, and the plan for what it becomes.
+
+Source: `worker/mail/` in this repo (`mail-worker.ts`, `wrangler.toml`, tests). Deployed
+as its own Cloudflare Worker script, `bloqr-mail` — separate from the main `bloqr-compiler`
+Worker, but versioned in this monorepo since there's no dedicated bloqr-mail repo.
+
+```bash
+deno task wrangler:mail:dev      # local dev
+deno task wrangler:mail:deploy   # deploy to Cloudflare
+```
+
+---
+
+## Why this worker exists
+
+Two Bloqr features, still being spec'd, both need a dedicated inbound-mail surface at
+`*@mail.bloqr.dev`:
+
+1. **Inbound SMTP-API** (the primary driver). Some power users already fold SMTP into
+   their workflows and want Bloqr to be a drop-in target for that — send a request by
+   email, get a result back, no HTTP client involved. Most business is expected to come
+   through the HTTP API; this is about covering that use case for users who need it, not
+   replacing the HTTP API.
+2. **Outbound filter-list delivery**. Compiled filter lists/artifacts sent as email
+   attachments from `*@mail.bloqr.dev` addresses (e.g. a scheduled or on-demand delivery
+   of a user's compiled list straight to their inbox).
+
+Both are **premium, not guaranteed for v1** — demand is being validated via a post-signup
+survey before committing engineering time to the full spec. `bloqr-mail` exists now so the
+DNS/Email Routing plumbing, naming, and code location are settled ahead of that decision,
+without pretending the feature is live.
+
+---
+
+## Why a *separate* Worker
+
+`bloqr-mail` is intentionally not a route inside the main `bloqr-compiler` Worker:
+
+- Cloudflare Email Routing dispatches inbound mail to a **destination Worker**, a
+  first-class binding distinct from Custom Domains / HTTP routes. It needs its own script.
+- Keeping it separate means an inbound-mail bug or outage can't take down the HTTP API
+  Worker, and vice versa.
+- It has **no `fetch()` handler and no public HTTP surface** — see [Domain / DNS
+  architecture](#domain--dns-architecture) for why that matters and what went wrong when
+  it briefly had one.
+
+The intended design is for `bloqr-mail` to stay a **thin protocol adapter**: parse the
+inbound message, resolve the requesting user, then dispatch into `bloqr-compiler`'s
+existing auth/billing/compilation logic — not a second implementation of that logic. See
+[Planned architecture](#planned-architecture-once-the-spec-lands) below.
+
+---
+
+## Domain / DNS architecture
+
+`bloqr-mail` sits behind `mail.bloqr.dev`, deliberately separate from the `bloqr.dev` apex:
+
+| Hostname | Owner | Purpose |
+| --- | --- | --- |
+| `bloqr.dev` (apex) | **Google Workspace** | Real human mailboxes (`jayson@bloqr.dev`, etc.). MX: `aspmx.l.google.com` \+ `alt*.aspmx.l.google.com`. SPF/DKIM/DMARC all Workspace-owned. |
+| `mail.bloqr.dev` | **Cloudflare Email Routing** | `bloqr-mail`'s inbound surface. Own MX (`route1/2/3.mx.cloudflare.net`), own SPF, own DKIM, own bounce handling (`cf-bounce.mail.bloqr.dev`) — fully independent of the apex. |
+
+<strong>This split is required, not a preference.</strong> MX records are exclusive per hostname — a
+domain can't have "some mail to Google, some to Cloudflare" at the same name. Putting
+Cloudflare Email Routing on its own subdomain is the standard way to get programmatic
+mail processing without touching Workspace's ownership of the apex.
+
+If a *feels-like-apex* address is ever needed (e.g. `bounces@bloqr.dev`), the pattern is:
+Workspace stays the single MX owner and forwards/aliases that specific address to its
+`@mail.bloqr.dev` equivalent (Workspace Admin → Gmail → Routing, or a per-user forward).
+Cloudflare never needs apex MX for that to work.
+
+### Routing rules (already live)
+
+Configured in Cloudflare Email Routing (dashboard or API), not in `wrangler.toml`:
+
+- `to: bloqr@mail.bloqr.dev` → Worker `bloqr-mail`
+- catch-all (`*@mail.bloqr.dev`) → Worker `bloqr-mail`
+
+### No Workers Custom Domain — on purpose
+
+`bloqr-mail` exports **no `fetch()` handler**. Email Workers only need `email()`. Cloudflare
+Email Routing dispatches to the destination Worker directly — there is no legitimate reason
+for HTTP traffic to ever reach this script.
+
+This was learned the hard way: under the previous name (`bloqr-email`), a Workers Custom
+Domain accidentally pointed `email.bloqr.dev` at this script's HTTP surface. Since it had no
+`fetch()` handler, every stray HTTP request (bots, browsers, monitors hitting the bare
+hostname) errored in Observability with `Handler does not export a fetch() function`. That
+Custom Domain/DNS record has been deleted along with the `email.bloqr.dev` hostname
+entirely — the worker now only exists behind `mail.bloqr.dev` via Email Routing. <strong>Do not
+re-add a Custom Domain for this script.</strong>
+
+---
+
+## Current behavior (placeholder)
+
+`worker/mail/mail-worker.ts` exports only `email()`:
+
+```ts
+export default {
+    async email(message, env, ctx) {
+        const recipient = parseRecipient(message.to);
+        const route = ROUTES[recipient.local]; // ROUTES is empty today
+        if (!route) {
+            message.setReject(NOT_LIVE_MESSAGE);
+            return;
+        }
+        await route({ message, env, ctx, recipient });
+    },
+};
+```
+
+Every inbound message — `bloqr@mail.bloqr.dev`, the catch-all, anything — is rejected
+with a clear bounce (`"Bloqr Mail does not accept inbound requests yet..."`) rather than
+silently accepted and dropped. A paying customer's request disappearing into a black hole
+is worse than a bounce they can act on.
+
+---
+
+## Planned architecture (once the spec lands)
+
+### Routing convention: Cloudflare subaddressing
+
+Subaddressing is already enabled on the `bloqr.dev` zone (`local+detail@domain`). The
+intended convention:
+
+```
+<command>+<userToken>@mail.bloqr.dev
+```
+
+- **local-part** (`compile`, `list`, ...) selects the command, via the `ROUTES` registry
+  in `mail-worker.ts` — adding a real command is a one-line addition once the spec lands.
+- <strong>`+detail` subaddress</strong> carries an opaque per-user token, used to identify the
+  requester for the entitlement/billing check.
+
+`parseRecipient()` in `mail-worker.ts` already implements this split and is unit-tested.
+
+### Business logic stays in `bloqr-compiler`
+
+`bloqr-mail` should **not** grow a second implementation of auth, billing-tier checks, or
+compilation logic. The recommended path: a Cloudflare **Service Binding** from `bloqr-mail`
+to `bloqr-compiler` (Worker-to-Worker call, no public network hop — see the commented-out
+`[[services]]` stanza in `worker/mail/wrangler.toml`), reusing the same
+`worker/utils/route-permissions.ts` / `worker/utils/user-access.ts` patterns the HTTP API
+already uses for entitlement checks. Since this is a premium, per-user-gated feature, the
+entitlement check must happen **before** any compilation work starts, not after.
+
+### Outbound delivery (attachments)
+
+Sending compiled lists as email attachments is a `bloqr-compiler`-side concern (triggered
+via `createEmailService()`, not something `bloqr-mail` does), and it's currently blocked on
+a real gap: `EmailPayloadSchema` (`worker/services/email-service.ts`) has **no attachment
+field**. Adding one — and the per-provider encoding work it implies (Resend supports
+attachments natively; the CF REST/binding paths need MIME multipart built by hand) — is
+follow-up work, not yet started.
+
+### Known related gap: `CfEmailWorkerService` FROM address
+
+Unrelated to `bloqr-mail` directly, but discovered during this work: `CfEmailWorkerService`
+(the lowest-priority outbound fallback in `worker/services/email-service.ts`, behind Resend
+and CF Email REST) sends `FROM: notifications@bloqr.dev` / `noreply@bloqr.dev` — bare apex
+addresses. Now that the apex is exclusively Google Workspace, that fallback tier's FROM
+domain has no Email Routing behind it and will likely fail delivery. Low-stakes today (it's
+the last-resort tier), but the FROM addresses should move to `@mail.bloqr.dev` when someone
+picks this up. See `worker/mail/wrangler.toml` and
+[Hybrid Email Architecture](/auth/email-architecture) for more detail.
+
+---
+
+## Testing
+
+`worker/mail/mail-worker.test.ts` covers `parseRecipient()` (plain vs. subaddressed
+local-parts) and the placeholder `email()` reject behavior. Run with the standard worker
+test task (`deno task test:worker`); type-checked via `deno task check:worker`.
+
+---
+
+## Further reading
+
+- [Hybrid Email Architecture](/auth/email-architecture) — outbound provider selection
+  (Resend / CF Email REST / CF Email Worker binding) and the Resend webhook receiver
+- `worker/mail/README.md` — quick-reference version of this document, colocated with the
+  source
+- [Cloudflare Email Routing docs](https://developers.cloudflare.com/email-routing/)
+- [Cloudflare Email Workers docs](https://developers.cloudflare.com/email-routing/email-workers/)

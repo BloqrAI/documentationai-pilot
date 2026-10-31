@@ -1,0 +1,78 @@
+---
+title: DNS Encryption Technical Reference
+description: Deep technical documentation on DNS encryption protocols, architecture, implementation, and security analysis for developers and infrastructure teams.
+---
+
+# DNS Encryption Technical Reference
+
+A comprehensive technical guide to DNS encryption protocols, Bloqr's architecture integration, performance analysis, and implementation details for developers and infrastructure teams.
+
+## DNS Encryption Protocols
+
+### DNS over HTTPS (DoH) - RFC 8484
+
+DoH encapsulates DNS queries as HTTP requests on port 443.
+
+<strong>Advantages:</strong>
+
+- Firewall-friendly (standard HTTPS port)
+- Works through most proxies
+- Widely supported
+
+<strong>Disadvantages:</strong>
+
+- HTTP overhead
+- Slightly more latency than DoT
+
+### DNS over TLS (DoT) - RFC 7858
+
+DoT wraps DNS in TLS using dedicated port 853.
+
+<strong>Advantages:</strong>
+
+- Lower overhead than DoH
+- Native DNS wire format
+- Better for high-volume resolvers
+
+<strong>Disadvantages:</strong>
+
+- Dedicated port 853 may be blocked
+- Less device support than DoH
+
+### DNS over QUIC (DoQ) - RFC 9250
+
+DoQ uses QUIC for DNS, combining DoT efficiency with multiplexing.
+
+<strong>Advantages:</strong>
+
+- 0-RTT resumption
+- Full multiplexing support
+- Future-proof
+
+<strong>Disadvantages:</strong>
+
+- Limited device support
+- Not yet widely deployed
+
+## Performance Characteristics
+
+| Protocol | First Query | Cached Query | Notes |
+| --- | --- | --- | --- |
+| DoH | 50-150ms | 10-30ms | HTTP overhead |
+| DoT | 30-80ms | 5-15ms | Lower overhead |
+| DoQ | 0-5ms | 5ms | With 0-RTT |
+
+## Cloudflare 1.1.1.1
+
+Cloudflare offers encrypted DNS with:
+
+- Zero-query logging policy
+- Global anycast network (14ms avg latency)
+- Blocks malware by default
+- Free for everyone
+
+## Related Documentation
+
+- [DNS Encryption & Privacy Guide](/guides/dns-encryption) \- User-friendly guide
+- [Client Libraries](/guides/clients) \- Integration examples
+- [API Reference](/api/readme) \- Build custom solutions
