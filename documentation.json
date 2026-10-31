@@ -1,6 +1,6 @@
 {
-  "name": "Documentation",
-  "initialRoute": "admin/api-reference",
+  "name": "Bloqr Doqs",
+  "initialRoute": "index",
   "template": "classic",
   "icons": {
     "library": "lucide"
@@ -273,1139 +273,1169 @@
     }
   ],
   "navigation": {
-    "pages": [
+    "tabs": [
       {
-        "group": "Admin",
+        "icon": "book",
         "pages": [
           {
-            "title": "API Reference",
-            "path": "admin/api-reference",
-            "icon": "code"
-          },
-          {
-            "title": "bloqr-admin Worker (admin.bloqr.dev)",
-            "path": "admin/bloqr-admin-worker",
-            "icon": "shield"
-          },
-          {
-            "title": "Database Schema",
-            "path": "admin/database-schema",
-            "icon": "database"
-          },
-          {
-            "title": "Feature Flags",
-            "path": "admin/feature-flags",
-            "icon": "file-text"
-          },
-          {
-            "title": "NeonApiService",
-            "path": "admin/neon-api-service",
-            "icon": "file-text"
-          },
-          {
-            "title": "Admin Neon Reporting Endpoints",
-            "path": "admin/neon-endpoints",
-            "icon": "shield"
-          },
-          {
-            "title": "Observability & Audit",
-            "path": "admin/observability",
-            "icon": "activity"
-          },
-          {
-            "title": "Operator Guide",
-            "path": "admin/operator-guide",
-            "icon": "book-open"
-          },
-          {
-            "title": "Admin System",
-            "path": "admin/readme",
-            "icon": "shield"
-          },
-          {
-            "title": "Roles & Permissions",
-            "path": "admin/roles-permissions",
-            "icon": "shield"
-          },
-          {
-            "title": "Subscription Plans — Admin Operations Guide",
-            "path": "admin/subscription-plans",
-            "icon": "credit-card"
-          }
-        ],
-        "icon": "shield"
-      },
-      {
-        "group": "Agent",
-        "pages": [
-          {
-            "title": "Agent Data Query Tools",
-            "path": "agent/data-query-tools",
+            "group": "Agent",
+            "pages": [
+              {
+                "title": "Agent Data Query Tools",
+                "path": "agent/data-query-tools",
+                "icon": "bot"
+              }
+            ],
             "icon": "bot"
-          }
-        ],
-        "icon": "bot"
-      },
-      {
-        "group": "Analytics",
-        "pages": [
-          {
-            "title": "Filter List Intelligence (Design)",
-            "path": "analytics/filter-list-intelligence",
-            "icon": "palette"
           },
           {
-            "title": "Iceberg-Style R2 Analytics Catalog",
-            "path": "analytics/iceberg-catalog",
-            "icon": "palette"
-          }
-        ],
-        "icon": "chart-column"
-      },
-      {
-        "title": "API Reference",
-        "path": "api-reference",
-        "icon": "code"
-      },
-      {
-        "group": "API",
-        "pages": [
-          {
-            "title": "AGTree Integration",
-            "path": "api/agtree-integration",
-            "icon": "puzzle"
+            "group": "Analytics",
+            "pages": [
+              {
+                "title": "Filter List Intelligence (Design)",
+                "path": "analytics/filter-list-intelligence",
+                "icon": "palette"
+              },
+              {
+                "title": "Iceberg-Style R2 Analytics Catalog",
+                "path": "analytics/iceberg-catalog",
+                "icon": "palette"
+              }
+            ],
+            "icon": "chart-column"
           },
           {
-            "title": "AST Walk",
-            "path": "api/ast-walk",
-            "icon": "file-text"
-          },
-          {
-            "title": "Batch API Guide - Visual Learning Edition",
-            "path": "api/batch-api-guide",
-            "icon": "code"
-          },
-          {
-            "title": "Configuration API",
-            "path": "api/configuration-api",
-            "icon": "settings"
-          },
-          {
-            "title": "Programmatic API Reference",
-            "path": "api/library",
-            "icon": "code"
-          },
-          {
-            "title": "Notifications Endpoint",
-            "path": "api/notifications",
-            "icon": "bell"
-          },
-          {
-            "title": "OpenAPI Support in Bloqr Compiler",
-            "path": "api/openapi-support",
-            "icon": "braces"
-          },
-          {
-            "title": "OpenAPI Tooling Guide",
-            "path": "api/openapi-tooling",
-            "icon": "braces"
-          },
-          {
-            "title": "Platform Support",
-            "path": "api/platform-support",
-            "icon": "layers"
-          },
-          {
-            "title": "OpenAPI Quick Reference",
-            "path": "api/quick-reference",
-            "icon": "braces"
-          },
-          {
-            "title": "Bloqr™ Compiler API",
-            "path": "api/readme",
-            "icon": "code"
-          },
-          {
-            "title": "Registry ↔ UI Integration",
-            "path": "api/registry-ui-integration",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Rule Sets API",
-            "path": "api/rule-sets",
-            "icon": "code"
-          },
-          {
-            "title": "Streaming API Documentation",
-            "path": "api/streaming-api",
-            "icon": "code"
-          },
-          {
-            "title": "Validate Rule Endpoint",
-            "path": "api/validate-rule",
-            "icon": "code"
-          },
-          {
-            "title": "Zod Validation Integration",
-            "path": "api/zod-validation",
-            "icon": "puzzle"
-          }
-        ],
-        "icon": "code"
-      },
-      {
-        "group": "Architecture",
-        "pages": [
-          {
-            "title": "Better Auth Plugins Analysis & Recommendations",
-            "path": "architecture/better-auth-plugins-analysis",
-            "icon": "key"
-          },
-          {
-            "title": "Browser-Syntax Engine",
-            "path": "architecture/browser-syntax-engine",
-            "icon": "globe"
-          },
-          {
-            "title": "@bloqr/compiler-core Dependency",
-            "path": "architecture/compiler-core-dependency",
-            "icon": "file-text"
-          },
-          {
-            "title": "Durable Objects",
-            "path": "architecture/durable-objects",
-            "icon": "file-text"
-          },
-          {
-            "title": "Secure Error-Passing Architecture",
-            "path": "architecture/error-passing",
-            "icon": "circle-alert"
-          },
-          {
-            "title": "Hono Routing Architecture",
-            "path": "architecture/hono-routing",
+            "group": "Architecture",
+            "pages": [
+              {
+                "title": "Better Auth Plugins Analysis & Recommendations",
+                "path": "architecture/better-auth-plugins-analysis",
+                "icon": "key"
+              },
+              {
+                "title": "Browser-Syntax Engine",
+                "path": "architecture/browser-syntax-engine",
+                "icon": "globe"
+              },
+              {
+                "title": "@bloqr/compiler-core Dependency",
+                "path": "architecture/compiler-core-dependency",
+                "icon": "file-text"
+              },
+              {
+                "title": "Durable Objects",
+                "path": "architecture/durable-objects",
+                "icon": "file-text"
+              },
+              {
+                "title": "Secure Error-Passing Architecture",
+                "path": "architecture/error-passing",
+                "icon": "circle-alert"
+              },
+              {
+                "title": "Hono Routing Architecture",
+                "path": "architecture/hono-routing",
+                "icon": "network"
+              },
+              {
+                "title": "Hono RPC Client — Typed API calls between Angular and Worker",
+                "path": "architecture/hono-rpc-client",
+                "icon": "code"
+              },
+              {
+                "title": "Multi-Tenancy Architecture",
+                "path": "architecture/multi-tenancy",
+                "icon": "network"
+              },
+              {
+                "title": "Neon wake budget",
+                "path": "architecture/neon-wake-budget",
+                "icon": "file-text"
+              },
+              {
+                "title": "Sitemaps & SEO Discovery",
+                "path": "architecture/sitemaps",
+                "icon": "map"
+              },
+              {
+                "title": "System Architecture",
+                "path": "architecture/system-architecture",
+                "icon": "network"
+              },
+              {
+                "title": "tRPC API Layer",
+                "path": "architecture/trpc",
+                "icon": "code"
+              },
+              {
+                "title": "Worker Request Lifecycle",
+                "path": "architecture/worker-request-lifecycle",
+                "icon": "file-text"
+              }
+            ],
             "icon": "network"
           },
           {
-            "title": "Hono RPC Client — Typed API calls between Angular and Worker",
-            "path": "architecture/hono-rpc-client",
-            "icon": "code"
-          },
-          {
-            "title": "Multi-Tenancy Architecture",
-            "path": "architecture/multi-tenancy",
-            "icon": "network"
-          },
-          {
-            "title": "Neon wake budget",
-            "path": "architecture/neon-wake-budget",
-            "icon": "file-text"
-          },
-          {
-            "title": "Sitemaps & SEO Discovery",
-            "path": "architecture/sitemaps",
-            "icon": "map"
-          },
-          {
-            "title": "System Architecture",
-            "path": "architecture/system-architecture",
-            "icon": "network"
-          },
-          {
-            "title": "tRPC API Layer",
-            "path": "architecture/trpc",
-            "icon": "code"
-          },
-          {
-            "title": "Worker Request Lifecycle",
-            "path": "architecture/worker-request-lifecycle",
-            "icon": "file-text"
-          }
-        ],
-        "icon": "network"
-      },
-      {
-        "group": "Auth",
-        "pages": [
-          {
-            "title": "Admin Access Guide",
-            "path": "auth/admin-access",
-            "icon": "shield"
-          },
-          {
-            "title": "API Authentication Guide",
-            "path": "auth/api-authentication",
-            "icon": "code"
-          },
-          {
-            "title": "API Key Prefix Migration: abc → blq",
-            "path": "auth/api-key-prefix-migration",
-            "icon": "code"
-          },
-          {
-            "title": "Auth Chain Reference",
-            "path": "auth/auth-chain-reference",
-            "icon": "key"
-          },
-          {
-            "title": "Auth Provider Selection",
-            "path": "auth/auth-provider-selection",
-            "icon": "key"
-          },
-          {
-            "title": "Better Auth Admin Guide",
-            "path": "auth/better-auth-admin-guide",
-            "icon": "key"
-          },
-          {
-            "title": "Better Auth Configuration Audit — May 2026",
-            "path": "auth/better-auth-audit-2026-05",
-            "icon": "key"
-          },
-          {
-            "title": "Better Auth Developer Guide",
-            "path": "auth/better-auth-developer-guide",
-            "icon": "key"
-          },
-          {
-            "title": "Better Auth — Prisma Adapter (Neon PostgreSQL via Hyperdrive)",
-            "path": "auth/better-auth-prisma",
-            "icon": "key"
-          },
-          {
-            "title": "Better Auth User Guide",
-            "path": "auth/better-auth-user-guide",
-            "icon": "key"
-          },
-          {
-            "title": "Auth Bootstrap Runbook",
-            "path": "auth/bootstrap-runbook",
-            "icon": "key"
-          },
-          {
-            "title": "Clerk + Cloudflare Integration Guide",
-            "path": "auth/clerk-cloudflare-integration",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Clerk Dashboard Setup Guide — Archived",
-            "path": "auth/clerk-setup",
-            "icon": "layout-dashboard"
-          },
-          {
-            "title": "CLI Authentication",
-            "path": "auth/cli-authentication",
-            "icon": "terminal"
-          },
-          {
-            "title": "Cloudflare Access Integration",
-            "path": "auth/cloudflare-access",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Authentication Configuration Guide",
-            "path": "auth/configuration",
-            "icon": "key"
-          },
-          {
-            "title": "Authentication Developer Guide",
-            "path": "auth/developer-guide",
-            "icon": "key"
-          },
-          {
-            "title": "Hybrid Email Architecture",
-            "path": "auth/email-architecture",
-            "icon": "mail"
-          },
-          {
-            "title": "Clerk → Better Auth Migration Guide",
-            "path": "auth/migration-clerk-to-better-auth",
-            "icon": "key"
-          },
-          {
-            "title": "Multi-Tenancy & Organizations",
-            "path": "auth/multi-tenancy",
-            "icon": "file-text"
-          },
-          {
-            "title": "Better Auth Plugin Extension Pack",
-            "path": "auth/plugin-extension-pack",
-            "icon": "key"
-          },
-          {
-            "title": "Testing with Postman",
-            "path": "auth/postman-testing",
-            "icon": "send"
-          },
-          {
-            "title": "Authentication & Authorization",
-            "path": "auth/readme",
-            "icon": "key"
-          },
-          {
-            "title": "Removing Anonymous Access",
-            "path": "auth/removing-anonymous-access",
-            "icon": "file-text"
-          },
-          {
-            "title": "ResendApiService — Contacts, Audiences & Templates",
-            "path": "auth/resend-api-service",
-            "icon": "layout-template"
-          },
-          {
-            "title": "Resend Audience Contact Sync",
-            "path": "auth/resend-contact-sync",
-            "icon": "headset"
-          },
-          {
-            "title": "Social OAuth Providers",
-            "path": "auth/social-providers",
-            "icon": "key"
-          },
-          {
-            "title": "ZTA Review Fixes (PR #1273 Follow-up)",
-            "path": "auth/zta-review-fixes",
-            "icon": "file-text"
-          }
-        ],
-        "icon": "key"
-      },
-      {
-        "group": "Billing",
-        "pages": [
-          {
-            "title": "Pay As You Go (PAYG) — Developer Guide",
-            "path": "billing/payg",
-            "icon": "book-open"
-          },
-          {
-            "title": "Billing Overview",
-            "path": "billing/readme",
+            "group": "Billing",
+            "pages": [
+              {
+                "title": "Pay As You Go (PAYG) — Developer Guide",
+                "path": "billing/payg",
+                "icon": "book-open"
+              },
+              {
+                "title": "Billing Overview",
+                "path": "billing/readme",
+                "icon": "credit-card"
+              },
+              {
+                "title": "Stripe Setup Guide",
+                "path": "billing/stripe-setup",
+                "icon": "wrench"
+              }
+            ],
             "icon": "credit-card"
           },
           {
-            "title": "Stripe Setup Guide",
-            "path": "billing/stripe-setup",
-            "icon": "wrench"
-          }
-        ],
-        "icon": "credit-card"
-      },
-      {
-        "group": "Cloudflare",
-        "pages": [
-          {
-            "title": "Public Dashboard",
-            "path": "cloudflare/admin-dashboard",
-            "icon": "layout-dashboard"
-          },
-          {
-            "title": "Bloqr Mail (bloqr-mail Worker)",
-            "path": "cloudflare/bloqr-mail",
-            "icon": "mail"
-          },
-          {
-            "title": "Browser Run Integration",
-            "path": "cloudflare/browser-run",
-            "icon": "globe"
-          },
-          {
-            "title": "Cloudflare Agents SDK Integration",
-            "path": "cloudflare/cloudflare-agents",
-            "icon": "bot"
-          },
-          {
-            "title": "Cloudflare Analytics Engine Integration",
-            "path": "cloudflare/cloudflare-analytics",
-            "icon": "chart-column"
-          },
-          {
-            "title": "Cloudflare D1 Integration Guide",
-            "path": "cloudflare/cloudflare-d1",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Cloudflare Services Integration",
-            "path": "cloudflare/cloudflare-services",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Cloudflare Workflows",
-            "path": "cloudflare/cloudflare-workflows",
-            "icon": "workflow"
-          },
-          {
-            "title": "Cloudflare Dynamic Workers — Integration Guide",
-            "path": "cloudflare/dynamic-workers",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Email Delivery Workflow",
-            "path": "cloudflare/email-delivery-workflow",
-            "icon": "mail"
-          },
-          {
-            "title": "Email Service",
-            "path": "cloudflare/email-service",
-            "icon": "mail"
-          },
-          {
-            "title": "Queue Diagnostic Events",
-            "path": "cloudflare/queue-diagnostics",
-            "icon": "file-text"
-          },
-          {
-            "title": "Cloudflare Queue Support",
-            "path": "cloudflare/queue-support",
-            "icon": "headset"
-          },
-          {
-            "title": "Cloudflare Worker Documentation",
-            "path": "cloudflare/readme",
-            "icon": "book"
-          },
-          {
-            "title": "End-to-End Tests",
-            "path": "cloudflare/worker-e2e-tests",
-            "icon": "test-tube"
-          }
-        ],
-        "icon": "folder"
-      },
-      {
-        "group": "Configuration",
-        "pages": [
-          {
-            "title": "Config Builder",
-            "path": "configuration/config-builder",
+            "group": "Configuration",
+            "pages": [
+              {
+                "title": "Config Builder",
+                "path": "configuration/config-builder",
+                "icon": "settings"
+              },
+              {
+                "title": "Environment Variable Overrides",
+                "path": "configuration/env-overrides",
+                "icon": "server"
+              },
+              {
+                "title": "Configuration Load Flow",
+                "path": "configuration/flow-diagram",
+                "icon": "settings"
+              },
+              {
+                "title": "Configuration Management",
+                "path": "configuration/readme",
+                "icon": "settings"
+              },
+              {
+                "title": "Schema Reference",
+                "path": "configuration/schema-reference",
+                "icon": "database"
+              },
+              {
+                "title": "Terraform / IaC Extensibility",
+                "path": "configuration/terraform-extensibility",
+                "icon": "file-text"
+              }
+            ],
             "icon": "settings"
           },
           {
-            "title": "Environment Variable Overrides",
-            "path": "configuration/env-overrides",
-            "icon": "server"
+            "group": "Features",
+            "pages": [
+              {
+                "title": "Master Block List",
+                "path": "features/block-list",
+                "icon": "blocks"
+              }
+            ],
+            "icon": "folder"
           },
           {
-            "title": "Configuration Load Flow",
-            "path": "configuration/flow-diagram",
-            "icon": "settings"
+            "group": "Frontend",
+            "pages": [
+              {
+                "title": "Angular Agent Frontend Reference",
+                "path": "frontend/agents-frontend",
+                "icon": "bot"
+              },
+              {
+                "title": "Angular Frontend — Developer Reference",
+                "path": "frontend/angular-frontend",
+                "icon": "book-marked"
+              },
+              {
+                "title": "Angular 22 Feature Parity Checklist",
+                "path": "frontend/angular-parity-checklist",
+                "icon": "list-checks"
+              },
+              {
+                "title": "Design System (Filter)",
+                "path": "frontend/design-system",
+                "icon": "palette"
+              },
+              {
+                "title": "Frontend Error Architecture",
+                "path": "frontend/error-architecture",
+                "icon": "circle-alert"
+              },
+              {
+                "title": "Frontend Error UX",
+                "path": "frontend/error-ux",
+                "icon": "circle-alert"
+              },
+              {
+                "title": "Frontend Documentation",
+                "path": "frontend/readme",
+                "icon": "book"
+              },
+              {
+                "title": "SPA Benefits Analysis — Bloqr Compiler",
+                "path": "frontend/spa-benefits",
+                "icon": "file-text"
+              },
+              {
+                "title": "Tailwind CSS v4 Integration",
+                "path": "frontend/tailwind-css",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Validation UI Component",
+                "path": "frontend/validation-ui",
+                "icon": "component"
+              },
+              {
+                "title": "Vite Integration",
+                "path": "frontend/vite",
+                "icon": "puzzle"
+              }
+            ],
+            "icon": "folder"
           },
           {
-            "title": "Configuration Management",
-            "path": "configuration/readme",
-            "icon": "settings"
-          },
-          {
-            "title": "Schema Reference",
-            "path": "configuration/schema-reference",
-            "icon": "database"
-          },
-          {
-            "title": "Terraform / IaC Extensibility",
-            "path": "configuration/terraform-extensibility",
-            "icon": "file-text"
-          }
-        ],
-        "icon": "settings"
-      },
-      {
-        "group": "Database setup",
-        "pages": [
-          {
-            "title": "Neon Database Branching Strategy",
-            "path": "database-setup/branching-strategy",
-            "icon": "database"
-          },
-          {
-            "title": "D1 → Neon Migration Status",
-            "path": "database-setup/d1-migration-status",
-            "icon": "arrow-right-left"
-          },
-          {
-            "title": "Database Architecture",
-            "path": "database-setup/database-architecture",
-            "icon": "database"
-          },
-          {
-            "title": "Database Evaluation: PlanetScale vs Neon vs Cloudflare vs Prisma",
-            "path": "database-setup/database-evaluation",
-            "icon": "database"
-          },
-          {
-            "title": "Edge Cache Architecture",
-            "path": "database-setup/edge-cache-architecture",
-            "icon": "zap"
-          },
-          {
-            "title": "Local Development Database Setup",
-            "path": "database-setup/local-dev",
-            "icon": "database"
-          },
-          {
-            "title": "D1 → Neon PostgreSQL Migration Checklist",
-            "path": "database-setup/migration-checklist",
-            "icon": "arrow-right-left"
-          },
-          {
-            "title": "Multi-Tenancy Schema Reference",
-            "path": "database-setup/multi-tenancy-schema",
-            "icon": "database"
-          },
-          {
-            "title": "Neon Database Branching for PR Workflows",
-            "path": "database-setup/neon-branching",
-            "icon": "database"
-          },
-          {
-            "title": "Neon + Prisma Cheat Sheet",
-            "path": "database-setup/neon-cheatsheet",
-            "icon": "file-text"
-          },
-          {
-            "title": "Neon PostgreSQL Migration — Complete Summary",
-            "path": "database-setup/neon-migration-summary",
-            "icon": "arrow-right-left"
-          },
-          {
-            "title": "Neon PostgreSQL Setup",
-            "path": "database-setup/neon-setup",
-            "icon": "wrench"
-          },
-          {
-            "title": "Database Architecture Plan",
-            "path": "database-setup/plan",
-            "icon": "database"
-          },
-          {
-            "title": "Modern PostgreSQL Practices",
-            "path": "database-setup/postgres-modern",
-            "icon": "file-text"
-          },
-          {
-            "title": "Prisma + Deno Compatibility: Fixing .js Import Specifiers",
-            "path": "database-setup/prisma-deno-compatibility",
-            "icon": "download"
-          },
-          {
-            "title": "Prisma Schema Reference",
-            "path": "database-setup/prisma-schema-reference",
-            "icon": "database"
-          },
-          {
-            "title": "Prisma ORM Evaluation for Storage Classes",
-            "path": "database-setup/prisma-evaluation",
-            "icon": "hard-drive"
-          },
-          {
-            "title": "Database Setup",
-            "path": "database-setup/readme",
-            "icon": "database"
-          }
-        ],
-        "icon": "database"
-      },
-      {
-        "group": "Deployment",
-        "pages": [
-          {
-            "title": "Cloudflare Containers Deployment Guide",
-            "path": "deployment/cloudflare-containers",
-            "icon": "cloud-upload"
-          },
-          {
-            "title": "Cloudflare Pages Deployment Guide",
-            "path": "deployment/cloudflare-pages",
-            "icon": "file-text"
-          },
-          {
-            "title": "Cloudflare Workers Architecture",
-            "path": "deployment/cloudflare-workers-architecture",
-            "icon": "network"
-          },
-          {
-            "title": "Deployment Versioning System",
-            "path": "deployment/deployment-versioning",
-            "icon": "cloud-upload"
-          },
-          {
-            "title": "Disaster Recovery & Incident Response Guide",
-            "path": "deployment/disaster-recovery",
-            "icon": "siren"
-          },
-          {
-            "title": "Docker Deployment",
-            "path": "deployment/docker",
-            "icon": "container"
-          },
-          {
-            "title": "Deployment Environments",
-            "path": "deployment/environments",
-            "icon": "cloud-upload"
-          },
-          {
-            "title": "Gradual Deployments",
-            "path": "deployment/gradual-deployments",
-            "icon": "cloud-upload"
-          },
-          {
-            "title": "Production Readiness Assessment",
-            "path": "deployment/production-readiness",
-            "icon": "file-text"
-          },
-          {
-            "title": "Production Secrets & Environment Configuration",
-            "path": "deployment/production-secrets",
-            "icon": "lock"
-          },
-          {
-            "title": "Deployment",
-            "path": "deployment/readme",
-            "icon": "cloud-upload"
-          }
-        ],
-        "icon": "cloud-upload"
-      },
-      {
-        "group": "Features",
-        "pages": [
-          {
-            "title": "Master Block List",
-            "path": "features/block-list",
-            "icon": "blocks"
-          }
-        ],
-        "icon": "folder"
-      },
-      {
-        "group": "Frontend",
-        "pages": [
-          {
-            "title": "Angular Agent Frontend Reference",
-            "path": "frontend/agents-frontend",
-            "icon": "bot"
-          },
-          {
-            "title": "Angular Frontend — Developer Reference",
-            "path": "frontend/angular-frontend",
-            "icon": "book-marked"
-          },
-          {
-            "title": "Angular 22 Feature Parity Checklist",
-            "path": "frontend/angular-parity-checklist",
-            "icon": "list-checks"
-          },
-          {
-            "title": "Design System (Filter)",
-            "path": "frontend/design-system",
-            "icon": "palette"
-          },
-          {
-            "title": "Frontend Error Architecture",
-            "path": "frontend/error-architecture",
-            "icon": "circle-alert"
-          },
-          {
-            "title": "Frontend Error UX",
-            "path": "frontend/error-ux",
-            "icon": "circle-alert"
-          },
-          {
-            "title": "Frontend Documentation",
-            "path": "frontend/readme",
-            "icon": "book"
-          },
-          {
-            "title": "SPA Benefits Analysis — Bloqr Compiler",
-            "path": "frontend/spa-benefits",
-            "icon": "file-text"
-          },
-          {
-            "title": "Tailwind CSS v4 Integration",
-            "path": "frontend/tailwind-css",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Validation UI Component",
-            "path": "frontend/validation-ui",
-            "icon": "component"
-          },
-          {
-            "title": "Vite Integration",
-            "path": "frontend/vite",
-            "icon": "puzzle"
-          }
-        ],
-        "icon": "folder"
-      },
-      {
-        "group": "Guides",
-        "pages": [
-          {
-            "title": "Client Libraries & Examples",
-            "path": "guides/clients",
-            "icon": "package"
-          },
-          {
-            "title": "DNS Encryption Technical Reference",
-            "path": "guides/dns-encryption-technical",
-            "icon": "lock"
-          },
-          {
-            "title": "DNS Encryption & Privacy Guide",
-            "path": "guides/dns-encryption",
-            "icon": "lock"
-          },
-          {
-            "title": "Quick Start",
-            "path": "guides/quick-start",
-            "icon": "zap"
-          },
-          {
-            "title": "Guides",
-            "path": "guides/readme",
+            "group": "Guides",
+            "pages": [
+              {
+                "title": "Client Libraries & Examples",
+                "path": "guides/clients",
+                "icon": "package"
+              },
+              {
+                "title": "DNS Encryption Technical Reference",
+                "path": "guides/dns-encryption-technical",
+                "icon": "lock"
+              },
+              {
+                "title": "DNS Encryption & Privacy Guide",
+                "path": "guides/dns-encryption",
+                "icon": "lock"
+              },
+              {
+                "title": "Quick Start",
+                "path": "guides/quick-start",
+                "icon": "zap"
+              },
+              {
+                "title": "Guides",
+                "path": "guides/readme",
+                "icon": "book-open"
+              },
+              {
+                "title": "Troubleshooting Guide",
+                "path": "guides/troubleshooting",
+                "icon": "triangle-alert"
+              },
+              {
+                "title": "User Migration Guide: Authentication & Database Upgrade",
+                "path": "guides/user-migration-guide",
+                "icon": "users"
+              },
+              {
+                "title": "Validation Error Tracking",
+                "path": "guides/validation-errors",
+                "icon": "circle-alert"
+              }
+            ],
             "icon": "book-open"
           },
           {
-            "title": "Troubleshooting Guide",
-            "path": "guides/troubleshooting",
-            "icon": "triangle-alert"
+            "title": "Bloqr™ Documentation",
+            "path": "index",
+            "icon": "book"
           },
           {
-            "title": "User Migration Guide: Authentication & Database Upgrade",
-            "path": "guides/user-migration-guide",
-            "icon": "users"
+            "title": "Bloqr™ Documentation",
+            "path": "overview",
+            "icon": "book"
           },
           {
-            "title": "Validation Error Tracking",
-            "path": "guides/validation-errors",
-            "icon": "circle-alert"
-          }
-        ],
-        "icon": "book-open"
-      },
-      {
-        "group": "Help",
-        "pages": [
-          {
-            "title": "Can",
-            "path": "help/cant-create-an-account",
-            "icon": "file-text"
-          },
-          {
-            "title": "Create a Bloqr Account",
-            "path": "help/create-an-account",
-            "icon": "user-check"
-          },
-          {
-            "title": "Frequently Asked Questions",
-            "path": "help/faq",
-            "icon": "circle-help"
-          },
-          {
-            "title": "Getting Started with Bloqr",
-            "path": "help/getting-started",
-            "icon": "rocket"
-          },
-          {
-            "title": "Use Bloqr on Your Device",
-            "path": "help/setup-your-device",
-            "icon": "file-text"
-          },
-          {
-            "title": "What Gets Blocked",
-            "path": "help/what-gets-blocked",
-            "icon": "file-text"
-          }
-        ],
-        "icon": "folder"
-      },
-      {
-        "title": "Bloqr™ Documentation",
-        "path": "index",
-        "icon": "book"
-      },
-      {
-        "group": "Middleware",
-        "pages": [
-          {
-            "title": "CORS Policy",
-            "path": "middleware/cors"
-          },
-          {
-            "title": "Hono Built-in Middleware",
-            "path": "middleware/hono-built-in-middleware"
-          },
-          {
-            "title": "Turnstile Middleware",
-            "path": "middleware/turnstile"
-          }
-        ],
-        "icon": "folder"
-      },
-      {
-        "group": "Observability",
-        "pages": [
-          {
-            "title": "Cloudflare Native Observability",
-            "path": "observability/cloudflare-observability",
-            "icon": "activity"
-          },
-          {
-            "title": "Cloudflare Logpush → R2 Setup Guide",
-            "path": "observability/logpush",
-            "icon": "wrench"
-          },
-          {
-            "title": "PostHog Analytics",
-            "path": "observability/posthog",
-            "icon": "chart-column"
-          },
-          {
-            "title": "Prometheus Metrics",
-            "path": "observability/prometheus",
-            "icon": "chart-column"
-          },
-          {
-            "title": "Custom Diagnostics Providers",
-            "path": "observability/providers",
-            "icon": "plug"
-          },
-          {
-            "title": "Observability",
-            "path": "observability/readme",
-            "icon": "activity"
-          },
-          {
-            "title": "Sentry Operations Runbook",
-            "path": "observability/sentry-operations",
-            "icon": "file-text"
-          },
-          {
-            "title": "Sentry Integration",
-            "path": "observability/sentry",
-            "icon": "puzzle"
-          },
-          {
-            "title": "Sentry Best Practices",
-            "path": "observability/sentry-best-practices",
-            "icon": "award"
-          },
-          {
-            "title": "Sentry — Durable Objects & Workflows",
-            "path": "observability/sentry-durable-objects",
+            "group": "Pipeline",
+            "pages": [
+              {
+                "title": "Stateful Pipeline Transforms",
+                "path": "pipeline/stateful-transforms",
+                "icon": "workflow"
+              }
+            ],
             "icon": "workflow"
-          }
-        ],
-        "icon": "activity"
-      },
-      {
-        "title": "Bloqr™ Documentation",
-        "path": "overview",
-        "icon": "book"
-      },
-      {
-        "group": "Pipeline",
-        "pages": [
+          },
           {
-            "title": "Stateful Pipeline Transforms",
-            "path": "pipeline/stateful-transforms",
-            "icon": "workflow"
-          }
-        ],
-        "icon": "workflow"
-      },
-      {
-        "group": "Postman",
-        "pages": [
-          {
-            "title": "Postman Collection",
-            "path": "postman/readme",
-            "icon": "send"
-          }
-        ],
-        "icon": "send"
-      },
-      {
-        "group": "Query",
-        "pages": [
-          {
-            "title": "Federated Query Layer",
-            "path": "query/federated-query-layer",
+            "group": "Query",
+            "pages": [
+              {
+                "title": "Federated Query Layer",
+                "path": "query/federated-query-layer",
+                "icon": "search"
+              }
+            ],
             "icon": "search"
-          }
-        ],
-        "icon": "search"
-      },
-      {
-        "group": "Releases",
-        "pages": [
+          },
           {
-            "title": "Introducing Bloqr Compiler: A Compiler-as-a-Service for Filter Lists",
-            "path": "releases/blog-post-bloqr-compiler",
+            "title": "Summary",
+            "path": "summary",
             "icon": "file-text"
           },
           {
-            "title": "Release Notes",
-            "path": "releases/readme",
-            "icon": "clock"
+            "group": "Threat intel",
+            "pages": [
+              {
+                "title": "Real-Time Threat Intelligence Ingestion & MCP Server",
+                "path": "threat-intel/ingestion-and-mcp-design",
+                "icon": "server"
+              }
+            ],
+            "icon": "folder"
           },
           {
-            "title": "Version 0.8.0 Release Summary",
-            "path": "releases/release-0-8-0",
-            "icon": "git-branch"
-          }
-        ],
-        "icon": "tag"
-      },
-      {
-        "group": "Security",
-        "pages": [
-          {
-            "title": "Cloudflare API Shield Vulnerability Scanner",
-            "path": "security/api-shield-vulnerability-scanner",
-            "icon": "code"
-          },
-          {
-            "title": "Automated Web Asset Sync",
-            "path": "security/api-shield-web-assets",
-            "icon": "globe"
-          },
-          {
-            "title": "Edge Data Export Policy (Draft)",
-            "path": "security/edge-data-export-policy",
-            "icon": "database"
-          },
-          {
-            "title": "Cloudflare Page Shield Integration",
-            "path": "security/page-shield-integration",
-            "icon": "file-text"
-          },
-          {
-            "title": "Zero Trust Architecture",
-            "path": "security/zero-trust-architecture",
-            "icon": "network"
-          },
-          {
-            "title": "ZTA Developer Guide",
-            "path": "security/zta-developer-guide",
-            "icon": "book-open"
-          }
-        ],
-        "icon": "shield-check"
-      },
-      {
-        "title": "Summary",
-        "path": "summary",
-        "icon": "file-text"
-      },
-      {
-        "group": "Threat intel",
-        "pages": [
-          {
-            "title": "Real-Time Threat Intelligence Ingestion & MCP Server",
-            "path": "threat-intel/ingestion-and-mcp-design",
-            "icon": "server"
-          }
-        ],
-        "icon": "folder"
-      },
-      {
-        "group": "Troubleshooting",
-        "pages": [
-          {
-            "title": "KB-001 — \\\\\\",
-            "path": "troubleshooting/kb-001-api-not-available",
-            "icon": "file-text"
-          },
-          {
-            "title": "KB-002: Hyperdrive Binding Connected but database Service Reports down",
-            "path": "troubleshooting/kb-002-hyperdrive-database-down",
-            "icon": "database"
-          },
-          {
-            "title": "KB-003: Database Down After Deploy — Live Debugging Session (2026-03-25)",
-            "path": "troubleshooting/kb-003-neon-hyperdrive-live-session-2026-03-25",
-            "icon": "database"
-          },
-          {
-            "title": "KB-004: WebAssembly.Module(): Wasm code generation disallowed by embedder",
-            "path": "troubleshooting/kb-004-prisma-wasm-cloudflare",
-            "icon": "file-text"
-          },
-          {
-            "title": "KB-005: Better Auth Cloudflare — Hanging Worker and Rate Limiting Skipped (IP Extraction Required)",
-            "path": "troubleshooting/kb-005-better-auth-cloudflare-ip-timeout",
+            "group": "Usage",
+            "pages": [
+              {
+                "title": "CLI Reference",
+                "path": "usage/cli",
+                "icon": "terminal"
+              },
+              {
+                "title": "Configuration",
+                "path": "usage/configuration",
+                "icon": "settings"
+              },
+              {
+                "title": "Transformations",
+                "path": "usage/transformations",
+                "icon": "file-text"
+              }
+            ],
             "icon": "gauge"
           },
           {
-            "title": "KB-006: D1 Authorization Error (7403) - API Token Missing D1:Edit Permission",
-            "path": "troubleshooting/kb-006-d1-authorization-7403",
+            "group": "Vendor",
+            "pages": [
+              {
+                "title": "Embedding Filter Lists",
+                "path": "vendor/embedding",
+                "icon": "brain"
+              },
+              {
+                "title": "Vendor Quickstart",
+                "path": "vendor/quickstart",
+                "icon": "zap"
+              }
+            ],
+            "icon": "folder"
+          }
+        ],
+        "tab": "Documentation"
+      },
+      {
+        "icon": "code",
+        "pages": [
+          {
+            "title": "API Reference",
+            "path": "api-reference",
+            "icon": "code"
+          },
+          {
+            "group": "API",
+            "pages": [
+              {
+                "title": "AGTree Integration",
+                "path": "api/agtree-integration",
+                "icon": "puzzle"
+              },
+              {
+                "title": "AST Walk",
+                "path": "api/ast-walk",
+                "icon": "file-text"
+              },
+              {
+                "title": "Batch API Guide - Visual Learning Edition",
+                "path": "api/batch-api-guide",
+                "icon": "code"
+              },
+              {
+                "title": "Configuration API",
+                "path": "api/configuration-api",
+                "icon": "settings"
+              },
+              {
+                "title": "Programmatic API Reference",
+                "path": "api/library",
+                "icon": "code"
+              },
+              {
+                "title": "Notifications Endpoint",
+                "path": "api/notifications",
+                "icon": "bell"
+              },
+              {
+                "title": "OpenAPI Support in Bloqr Compiler",
+                "path": "api/openapi-support",
+                "icon": "braces"
+              },
+              {
+                "title": "OpenAPI Tooling Guide",
+                "path": "api/openapi-tooling",
+                "icon": "braces"
+              },
+              {
+                "title": "Platform Support",
+                "path": "api/platform-support",
+                "icon": "layers"
+              },
+              {
+                "title": "OpenAPI Quick Reference",
+                "path": "api/quick-reference",
+                "icon": "braces"
+              },
+              {
+                "title": "Bloqr™ Compiler API",
+                "path": "api/readme",
+                "icon": "code"
+              },
+              {
+                "title": "Registry ↔ UI Integration",
+                "path": "api/registry-ui-integration",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Rule Sets API",
+                "path": "api/rule-sets",
+                "icon": "code"
+              },
+              {
+                "title": "Streaming API Documentation",
+                "path": "api/streaming-api",
+                "icon": "code"
+              },
+              {
+                "title": "Validate Rule Endpoint",
+                "path": "api/validate-rule",
+                "icon": "code"
+              },
+              {
+                "title": "Zod Validation Integration",
+                "path": "api/zod-validation",
+                "icon": "puzzle"
+              }
+            ],
+            "icon": "code"
+          },
+          {
+            "group": "Postman",
+            "pages": [
+              {
+                "title": "Postman Collection",
+                "path": "postman/readme",
+                "icon": "send"
+              }
+            ],
+            "icon": "send"
+          }
+        ],
+        "tab": "API Reference"
+      },
+      {
+        "icon": "settings",
+        "pages": [
+          {
+            "group": "Admin",
+            "pages": [
+              {
+                "title": "API Reference",
+                "path": "admin/api-reference",
+                "icon": "code"
+              },
+              {
+                "title": "bloqr-admin Worker (admin.bloqr.dev)",
+                "path": "admin/bloqr-admin-worker",
+                "icon": "shield"
+              },
+              {
+                "title": "Database Schema",
+                "path": "admin/database-schema",
+                "icon": "database"
+              },
+              {
+                "title": "Feature Flags",
+                "path": "admin/feature-flags",
+                "icon": "file-text"
+              },
+              {
+                "title": "NeonApiService",
+                "path": "admin/neon-api-service",
+                "icon": "file-text"
+              },
+              {
+                "title": "Admin Neon Reporting Endpoints",
+                "path": "admin/neon-endpoints",
+                "icon": "shield"
+              },
+              {
+                "title": "Observability & Audit",
+                "path": "admin/observability",
+                "icon": "activity"
+              },
+              {
+                "title": "Operator Guide",
+                "path": "admin/operator-guide",
+                "icon": "book-open"
+              },
+              {
+                "title": "Admin System",
+                "path": "admin/readme",
+                "icon": "shield"
+              },
+              {
+                "title": "Roles & Permissions",
+                "path": "admin/roles-permissions",
+                "icon": "shield"
+              },
+              {
+                "title": "Subscription Plans — Admin Operations Guide",
+                "path": "admin/subscription-plans",
+                "icon": "credit-card"
+              }
+            ],
             "icon": "shield"
           },
           {
-            "title": "KB-007: Production Debugging Session — Sign-up 500 / curl 403 / Migration Drift (2026-04)",
-            "path": "troubleshooting/kb-007-production-debugging-session-2026-04",
-            "icon": "bug"
-          },
-          {
-            "title": "KB-008 — Prisma 7 + Cloudflare Workers: WebAssembly.Module() Disallowed by Embedder",
-            "path": "troubleshooting/kb-008-prisma7-wasm-cloudflare-workers",
-            "icon": "file-text"
-          },
-          {
-            "title": "KB-009 — Better Auth + Neon Database Integration: Version Sync, UUID Enforcement, and KV Secondary Storage",
-            "path": "troubleshooting/kb-009-better-auth-neon-integration",
+            "group": "Auth",
+            "pages": [
+              {
+                "title": "Admin Access Guide",
+                "path": "auth/admin-access",
+                "icon": "shield"
+              },
+              {
+                "title": "API Authentication Guide",
+                "path": "auth/api-authentication",
+                "icon": "code"
+              },
+              {
+                "title": "API Key Prefix Migration: abc → blq",
+                "path": "auth/api-key-prefix-migration",
+                "icon": "code"
+              },
+              {
+                "title": "Auth Chain Reference",
+                "path": "auth/auth-chain-reference",
+                "icon": "key"
+              },
+              {
+                "title": "Auth Provider Selection",
+                "path": "auth/auth-provider-selection",
+                "icon": "key"
+              },
+              {
+                "title": "Better Auth Admin Guide",
+                "path": "auth/better-auth-admin-guide",
+                "icon": "key"
+              },
+              {
+                "title": "Better Auth Configuration Audit — May 2026",
+                "path": "auth/better-auth-audit-2026-05",
+                "icon": "key"
+              },
+              {
+                "title": "Better Auth Developer Guide",
+                "path": "auth/better-auth-developer-guide",
+                "icon": "key"
+              },
+              {
+                "title": "Better Auth — Prisma Adapter (Neon PostgreSQL via Hyperdrive)",
+                "path": "auth/better-auth-prisma",
+                "icon": "key"
+              },
+              {
+                "title": "Better Auth User Guide",
+                "path": "auth/better-auth-user-guide",
+                "icon": "key"
+              },
+              {
+                "title": "Auth Bootstrap Runbook",
+                "path": "auth/bootstrap-runbook",
+                "icon": "key"
+              },
+              {
+                "title": "Clerk + Cloudflare Integration Guide",
+                "path": "auth/clerk-cloudflare-integration",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Clerk Dashboard Setup Guide — Archived",
+                "path": "auth/clerk-setup",
+                "icon": "layout-dashboard"
+              },
+              {
+                "title": "CLI Authentication",
+                "path": "auth/cli-authentication",
+                "icon": "terminal"
+              },
+              {
+                "title": "Cloudflare Access Integration",
+                "path": "auth/cloudflare-access",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Authentication Configuration Guide",
+                "path": "auth/configuration",
+                "icon": "key"
+              },
+              {
+                "title": "Authentication Developer Guide",
+                "path": "auth/developer-guide",
+                "icon": "key"
+              },
+              {
+                "title": "Hybrid Email Architecture",
+                "path": "auth/email-architecture",
+                "icon": "mail"
+              },
+              {
+                "title": "Clerk → Better Auth Migration Guide",
+                "path": "auth/migration-clerk-to-better-auth",
+                "icon": "key"
+              },
+              {
+                "title": "Multi-Tenancy & Organizations",
+                "path": "auth/multi-tenancy",
+                "icon": "file-text"
+              },
+              {
+                "title": "Better Auth Plugin Extension Pack",
+                "path": "auth/plugin-extension-pack",
+                "icon": "key"
+              },
+              {
+                "title": "Testing with Postman",
+                "path": "auth/postman-testing",
+                "icon": "send"
+              },
+              {
+                "title": "Authentication & Authorization",
+                "path": "auth/readme",
+                "icon": "key"
+              },
+              {
+                "title": "Removing Anonymous Access",
+                "path": "auth/removing-anonymous-access",
+                "icon": "file-text"
+              },
+              {
+                "title": "ResendApiService — Contacts, Audiences & Templates",
+                "path": "auth/resend-api-service",
+                "icon": "layout-template"
+              },
+              {
+                "title": "Resend Audience Contact Sync",
+                "path": "auth/resend-contact-sync",
+                "icon": "headset"
+              },
+              {
+                "title": "Social OAuth Providers",
+                "path": "auth/social-providers",
+                "icon": "key"
+              },
+              {
+                "title": "ZTA Review Fixes (PR #1273 Follow-up)",
+                "path": "auth/zta-review-fixes",
+                "icon": "file-text"
+              }
+            ],
             "icon": "key"
           },
           {
-            "title": "Neon PostgreSQL Troubleshooting",
-            "path": "troubleshooting/neon-troubleshooting",
-            "icon": "triangle-alert"
+            "group": "Cloudflare",
+            "pages": [
+              {
+                "title": "Public Dashboard",
+                "path": "cloudflare/admin-dashboard",
+                "icon": "layout-dashboard"
+              },
+              {
+                "title": "Bloqr Mail (bloqr-mail Worker)",
+                "path": "cloudflare/bloqr-mail",
+                "icon": "mail"
+              },
+              {
+                "title": "Browser Run Integration",
+                "path": "cloudflare/browser-run",
+                "icon": "globe"
+              },
+              {
+                "title": "Cloudflare Agents SDK Integration",
+                "path": "cloudflare/cloudflare-agents",
+                "icon": "bot"
+              },
+              {
+                "title": "Cloudflare Analytics Engine Integration",
+                "path": "cloudflare/cloudflare-analytics",
+                "icon": "chart-column"
+              },
+              {
+                "title": "Cloudflare D1 Integration Guide",
+                "path": "cloudflare/cloudflare-d1",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Cloudflare Services Integration",
+                "path": "cloudflare/cloudflare-services",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Cloudflare Workflows",
+                "path": "cloudflare/cloudflare-workflows",
+                "icon": "workflow"
+              },
+              {
+                "title": "Cloudflare Dynamic Workers — Integration Guide",
+                "path": "cloudflare/dynamic-workers",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Email Delivery Workflow",
+                "path": "cloudflare/email-delivery-workflow",
+                "icon": "mail"
+              },
+              {
+                "title": "Email Service",
+                "path": "cloudflare/email-service",
+                "icon": "mail"
+              },
+              {
+                "title": "Queue Diagnostic Events",
+                "path": "cloudflare/queue-diagnostics",
+                "icon": "file-text"
+              },
+              {
+                "title": "Cloudflare Queue Support",
+                "path": "cloudflare/queue-support",
+                "icon": "headset"
+              },
+              {
+                "title": "Cloudflare Worker Documentation",
+                "path": "cloudflare/readme",
+                "icon": "book"
+              },
+              {
+                "title": "End-to-End Tests",
+                "path": "cloudflare/worker-e2e-tests",
+                "icon": "test-tube"
+              }
+            ],
+            "icon": "folder"
           },
           {
-            "title": "Bloqr Compiler — Operations & Troubleshooting KB",
-            "path": "troubleshooting/readme",
-            "icon": "triangle-alert"
+            "group": "Database setup",
+            "pages": [
+              {
+                "title": "Neon Database Branching Strategy",
+                "path": "database-setup/branching-strategy",
+                "icon": "database"
+              },
+              {
+                "title": "D1 → Neon Migration Status",
+                "path": "database-setup/d1-migration-status",
+                "icon": "arrow-right-left"
+              },
+              {
+                "title": "Database Architecture",
+                "path": "database-setup/database-architecture",
+                "icon": "database"
+              },
+              {
+                "title": "Database Evaluation: PlanetScale vs Neon vs Cloudflare vs Prisma",
+                "path": "database-setup/database-evaluation",
+                "icon": "database"
+              },
+              {
+                "title": "Edge Cache Architecture",
+                "path": "database-setup/edge-cache-architecture",
+                "icon": "zap"
+              },
+              {
+                "title": "Local Development Database Setup",
+                "path": "database-setup/local-dev",
+                "icon": "database"
+              },
+              {
+                "title": "D1 → Neon PostgreSQL Migration Checklist",
+                "path": "database-setup/migration-checklist",
+                "icon": "arrow-right-left"
+              },
+              {
+                "title": "Multi-Tenancy Schema Reference",
+                "path": "database-setup/multi-tenancy-schema",
+                "icon": "database"
+              },
+              {
+                "title": "Neon Database Branching for PR Workflows",
+                "path": "database-setup/neon-branching",
+                "icon": "database"
+              },
+              {
+                "title": "Neon + Prisma Cheat Sheet",
+                "path": "database-setup/neon-cheatsheet",
+                "icon": "file-text"
+              },
+              {
+                "title": "Neon PostgreSQL Migration — Complete Summary",
+                "path": "database-setup/neon-migration-summary",
+                "icon": "arrow-right-left"
+              },
+              {
+                "title": "Neon PostgreSQL Setup",
+                "path": "database-setup/neon-setup",
+                "icon": "wrench"
+              },
+              {
+                "title": "Database Architecture Plan",
+                "path": "database-setup/plan",
+                "icon": "database"
+              },
+              {
+                "title": "Modern PostgreSQL Practices",
+                "path": "database-setup/postgres-modern",
+                "icon": "file-text"
+              },
+              {
+                "title": "Prisma + Deno Compatibility: Fixing .js Import Specifiers",
+                "path": "database-setup/prisma-deno-compatibility",
+                "icon": "download"
+              },
+              {
+                "title": "Prisma Schema Reference",
+                "path": "database-setup/prisma-schema-reference",
+                "icon": "database"
+              },
+              {
+                "title": "Prisma ORM Evaluation for Storage Classes",
+                "path": "database-setup/prisma-evaluation",
+                "icon": "hard-drive"
+              },
+              {
+                "title": "Database Setup",
+                "path": "database-setup/readme",
+                "icon": "database"
+              }
+            ],
+            "icon": "database"
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              {
+                "title": "Cloudflare Containers Deployment Guide",
+                "path": "deployment/cloudflare-containers",
+                "icon": "cloud-upload"
+              },
+              {
+                "title": "Cloudflare Pages Deployment Guide",
+                "path": "deployment/cloudflare-pages",
+                "icon": "file-text"
+              },
+              {
+                "title": "Cloudflare Workers Architecture",
+                "path": "deployment/cloudflare-workers-architecture",
+                "icon": "network"
+              },
+              {
+                "title": "Deployment Versioning System",
+                "path": "deployment/deployment-versioning",
+                "icon": "cloud-upload"
+              },
+              {
+                "title": "Disaster Recovery & Incident Response Guide",
+                "path": "deployment/disaster-recovery",
+                "icon": "siren"
+              },
+              {
+                "title": "Docker Deployment",
+                "path": "deployment/docker",
+                "icon": "container"
+              },
+              {
+                "title": "Deployment Environments",
+                "path": "deployment/environments",
+                "icon": "cloud-upload"
+              },
+              {
+                "title": "Gradual Deployments",
+                "path": "deployment/gradual-deployments",
+                "icon": "cloud-upload"
+              },
+              {
+                "title": "Production Readiness Assessment",
+                "path": "deployment/production-readiness",
+                "icon": "file-text"
+              },
+              {
+                "title": "Production Secrets & Environment Configuration",
+                "path": "deployment/production-secrets",
+                "icon": "lock"
+              },
+              {
+                "title": "Deployment",
+                "path": "deployment/readme",
+                "icon": "cloud-upload"
+              }
+            ],
+            "icon": "cloud-upload"
+          },
+          {
+            "group": "Middleware",
+            "pages": [
+              {
+                "title": "CORS Policy",
+                "path": "middleware/cors"
+              },
+              {
+                "title": "Hono Built-in Middleware",
+                "path": "middleware/hono-built-in-middleware"
+              },
+              {
+                "title": "Turnstile Middleware",
+                "path": "middleware/turnstile"
+              }
+            ],
+            "icon": "folder"
+          },
+          {
+            "group": "Observability",
+            "pages": [
+              {
+                "title": "Cloudflare Native Observability",
+                "path": "observability/cloudflare-observability",
+                "icon": "activity"
+              },
+              {
+                "title": "Cloudflare Logpush → R2 Setup Guide",
+                "path": "observability/logpush",
+                "icon": "wrench"
+              },
+              {
+                "title": "PostHog Analytics",
+                "path": "observability/posthog",
+                "icon": "chart-column"
+              },
+              {
+                "title": "Prometheus Metrics",
+                "path": "observability/prometheus",
+                "icon": "chart-column"
+              },
+              {
+                "title": "Custom Diagnostics Providers",
+                "path": "observability/providers",
+                "icon": "plug"
+              },
+              {
+                "title": "Observability",
+                "path": "observability/readme",
+                "icon": "activity"
+              },
+              {
+                "title": "Sentry Operations Runbook",
+                "path": "observability/sentry-operations",
+                "icon": "file-text"
+              },
+              {
+                "title": "Sentry Integration",
+                "path": "observability/sentry",
+                "icon": "puzzle"
+              },
+              {
+                "title": "Sentry Best Practices",
+                "path": "observability/sentry-best-practices",
+                "icon": "award"
+              },
+              {
+                "title": "Sentry — Durable Objects & Workflows",
+                "path": "observability/sentry-durable-objects",
+                "icon": "workflow"
+              }
+            ],
+            "icon": "activity"
+          },
+          {
+            "group": "Security",
+            "pages": [
+              {
+                "title": "Cloudflare API Shield Vulnerability Scanner",
+                "path": "security/api-shield-vulnerability-scanner",
+                "icon": "code"
+              },
+              {
+                "title": "Automated Web Asset Sync",
+                "path": "security/api-shield-web-assets",
+                "icon": "globe"
+              },
+              {
+                "title": "Edge Data Export Policy (Draft)",
+                "path": "security/edge-data-export-policy",
+                "icon": "database"
+              },
+              {
+                "title": "Cloudflare Page Shield Integration",
+                "path": "security/page-shield-integration",
+                "icon": "file-text"
+              },
+              {
+                "title": "Zero Trust Architecture",
+                "path": "security/zero-trust-architecture",
+                "icon": "network"
+              },
+              {
+                "title": "ZTA Developer Guide",
+                "path": "security/zta-developer-guide",
+                "icon": "book-open"
+              }
+            ],
+            "icon": "shield-check"
           }
         ],
-        "icon": "triangle-alert"
+        "tab": "Admin & Developer"
       },
       {
-        "group": "Usage",
+        "icon": "help-circle",
         "pages": [
           {
-            "title": "CLI Reference",
-            "path": "usage/cli",
-            "icon": "terminal"
+            "group": "Help",
+            "pages": [
+              {
+                "title": "Can",
+                "path": "help/cant-create-an-account",
+                "icon": "file-text"
+              },
+              {
+                "title": "Create a Bloqr Account",
+                "path": "help/create-an-account",
+                "icon": "user-check"
+              },
+              {
+                "title": "Frequently Asked Questions",
+                "path": "help/faq",
+                "icon": "circle-help"
+              },
+              {
+                "title": "Getting Started with Bloqr",
+                "path": "help/getting-started",
+                "icon": "rocket"
+              },
+              {
+                "title": "Use Bloqr on Your Device",
+                "path": "help/setup-your-device",
+                "icon": "file-text"
+              },
+              {
+                "title": "What Gets Blocked",
+                "path": "help/what-gets-blocked",
+                "icon": "file-text"
+              }
+            ],
+            "icon": "folder"
           },
           {
-            "title": "Configuration",
-            "path": "usage/configuration",
-            "icon": "settings"
-          },
-          {
-            "title": "Transformations",
-            "path": "usage/transformations",
-            "icon": "file-text"
+            "group": "Troubleshooting",
+            "pages": [
+              {
+                "title": "KB-001 — \\\\\\",
+                "path": "troubleshooting/kb-001-api-not-available",
+                "icon": "file-text"
+              },
+              {
+                "title": "KB-002: Hyperdrive Binding Connected but database Service Reports down",
+                "path": "troubleshooting/kb-002-hyperdrive-database-down",
+                "icon": "database"
+              },
+              {
+                "title": "KB-003: Database Down After Deploy — Live Debugging Session (2026-03-25)",
+                "path": "troubleshooting/kb-003-neon-hyperdrive-live-session-2026-03-25",
+                "icon": "database"
+              },
+              {
+                "title": "KB-004: WebAssembly.Module(): Wasm code generation disallowed by embedder",
+                "path": "troubleshooting/kb-004-prisma-wasm-cloudflare",
+                "icon": "file-text"
+              },
+              {
+                "title": "KB-005: Better Auth Cloudflare — Hanging Worker and Rate Limiting Skipped (IP Extraction Required)",
+                "path": "troubleshooting/kb-005-better-auth-cloudflare-ip-timeout",
+                "icon": "gauge"
+              },
+              {
+                "title": "KB-006: D1 Authorization Error (7403) - API Token Missing D1:Edit Permission",
+                "path": "troubleshooting/kb-006-d1-authorization-7403",
+                "icon": "shield"
+              },
+              {
+                "title": "KB-007: Production Debugging Session — Sign-up 500 / curl 403 / Migration Drift (2026-04)",
+                "path": "troubleshooting/kb-007-production-debugging-session-2026-04",
+                "icon": "bug"
+              },
+              {
+                "title": "KB-008 — Prisma 7 + Cloudflare Workers: WebAssembly.Module() Disallowed by Embedder",
+                "path": "troubleshooting/kb-008-prisma7-wasm-cloudflare-workers",
+                "icon": "file-text"
+              },
+              {
+                "title": "KB-009 — Better Auth + Neon Database Integration: Version Sync, UUID Enforcement, and KV Secondary Storage",
+                "path": "troubleshooting/kb-009-better-auth-neon-integration",
+                "icon": "key"
+              },
+              {
+                "title": "Neon PostgreSQL Troubleshooting",
+                "path": "troubleshooting/neon-troubleshooting",
+                "icon": "triangle-alert"
+              },
+              {
+                "title": "Bloqr Compiler — Operations & Troubleshooting KB",
+                "path": "troubleshooting/readme",
+                "icon": "triangle-alert"
+              }
+            ],
+            "icon": "triangle-alert"
           }
         ],
-        "icon": "gauge"
+        "tab": "Help Center"
       },
       {
-        "group": "Vendor",
+        "icon": "clock",
         "pages": [
           {
-            "title": "Embedding Filter Lists",
-            "path": "vendor/embedding",
-            "icon": "brain"
-          },
-          {
-            "title": "Vendor Quickstart",
-            "path": "vendor/quickstart",
-            "icon": "zap"
+            "group": "Releases",
+            "pages": [
+              {
+                "title": "Introducing Bloqr Compiler: A Compiler-as-a-Service for Filter Lists",
+                "path": "releases/blog-post-bloqr-compiler",
+                "icon": "file-text"
+              },
+              {
+                "title": "Release Notes",
+                "path": "releases/readme",
+                "icon": "clock"
+              },
+              {
+                "title": "Version 0.8.0 Release Summary",
+                "path": "releases/release-0-8-0",
+                "icon": "git-branch"
+              }
+            ],
+            "icon": "tag"
           }
         ],
-        "icon": "folder"
+        "tab": "Changelog"
       }
     ]
   }
