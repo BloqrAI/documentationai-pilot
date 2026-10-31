@@ -16,14 +16,7 @@
       },
       {
         "tab": "API Reference",
-        "icon": "code",
-        "groups": [
-          {
-            "group": "Bloqr API",
-            "pages": [],
-            "openapi": "https://api.bloqr.dev/api/openapi.json"
-          }
-        ]
+        "icon": "code"
       },
       {
         "tab": "Help Center",
