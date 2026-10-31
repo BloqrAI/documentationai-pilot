@@ -63,6 +63,17 @@
           }
         ]
       }
+    ],
+    "pages": [
+      {
+        "group": "API Documentation",
+        "pages": [],
+        "icon": "tabler:api"
+      },
+      {
+        "group": "API Docs",
+        "pages": []
+      }
     ]
   },
   "title": "Bloqr Doqs",
