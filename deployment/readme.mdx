@@ -1,0 +1,35 @@
+---
+title: Deployment
+description: Guides for deploying the Bloqr Compiler to various platforms.
+---
+
+# Deployment
+
+Guides for deploying the Bloqr Compiler to various platforms.
+
+## Contents
+
+- [Environments](/deployment/environments) \- Three-environment model (local / dev / production), deploy commands, TOML scoping rules
+- [Docker](/deployment/docker) \- Docker Compose deployment guide with Kubernetes examples
+- [Cloudflare Containers](/deployment/cloudflare-containers) \- Deploy to Cloudflare edge network
+- [Cloudflare Pages](/deployment/cloudflare-pages) \- Deploy to Cloudflare Pages
+- [Cloudflare Workers Architecture](/deployment/cloudflare-workers-architecture) \- Backend vs frontend workers, deployment modes, and their relationship
+- [Deployment Versioning](/deployment/deployment-versioning) \- Automated deployment tracking and versioning
+- [Gradual Deployments](/deployment/gradual-deployments) \- Progressive traffic rollouts using `wrangler versions`
+- [Production Readiness](/deployment/production-readiness) \- Production readiness assessment and recommendations
+
+## Quick Start
+
+```bash
+# Using Docker Compose (recommended)
+docker compose up -d
+```
+
+Access the web UI at [http://localhost:8787](http://localhost:8787)
+
+## Related
+
+- [Environments](/deployment/environments) \- Deploy to local / dev / production
+- [Quick Start Guide](/guides/quick-start) \- Get up and running quickly
+- Environment Configuration - Environment variables
+- GitHub Actions Environment Setup - CI/CD environment configuration

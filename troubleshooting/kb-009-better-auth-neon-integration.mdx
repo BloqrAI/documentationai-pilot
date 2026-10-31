@@ -1,0 +1,263 @@
+---
+title: "KB-009 — Better Auth + Neon Database Integration: Version Sync, UUID Enforcement, and KV Secondary Storage"
+description: This article documents the architecture of the Better Auth + Neon database integration in the Bloqr backend worker, the known failure modes encountered...
+---
+
+# KB-009 — Better Auth + Neon Database Integration
+
+<strong>Series:</strong> Bloqr Compiler Operations & Troubleshooting KB
+<strong>Component:</strong> `worker/lib/auth.ts`, `worker/lib/prisma.ts` — Better Auth + Neon via Hyperdrive
+<strong>Date Created:</strong> 2026-06-29
+<strong>Status:</strong> Active
+
+---
+
+## Overview
+
+This article documents the architecture of the Better Auth + Neon database integration in the Bloqr backend worker, the known failure modes encountered during operation (particularly after the monolith-split migration from `bloqr-compiler` → `bloqr-frontend` \+ `bloqr-backend`), and how to diagnose and fix them.
+
+It also records the dependency upgrades shipped on 2026-06-29 to resolve version skew between the Deno and Node/pnpm environments.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart TD
+    SPA["Browser / Angular SPA"] -->|same-origin proxy via service binding| FE["bloqr-frontend Worker"]
+    FE -->|env.API.fetch (service binding)| BE["bloqr-backend Worker"]
+    BE --> BA["Better Auth 1.6.22 (@better-auth/infra 0.3.4)"]
+    BA --> PRIMARY["Primary storage: Prisma (PostgreSQL adapter) → Neon via Hyperdrive"]
+    BA --> SECONDARY["Secondary storage: Cloudflare KV (BETTER_AUTH_KV namespace)"]
+    BE --> PRISMA["Prisma 7.x → @prisma/adapter-pg → pg.Pool → HYPERDRIVE.connectionString"]
+```
+
+### Key design decisions
+
+| Decision | Rationale |
+| --- | --- |
+| Per-request PrismaClient | Hyperdrive is the connection pool — it proxies locally, so per-request instantiation is safe |
+| `pg.Pool` (max: 1) | Cloudflare Workers are stateless isolates — one connection per request is all that's possible |
+| UUID enforcement extension | Prisma `$extends` query extension replaces non-UUID IDs before PostgreSQL rejects them |
+| `storeSessionInDatabase: true` | Better Auth 1.6.x excludes the session model from its schema when `secondaryStorage` is present unless this flag is set |
+| `disableCSRFCheck: true` | Prevents false `MISSING_OR_NULL_ORIGIN` errors from API/CLI clients; real CSRF protection is `sameSite: 'lax'` cookies |
+
+---
+
+## Dependency Versions (as of 2026-06-29)
+
+| Package | deno.json | package.json (pnpm) | Notes |
+| --- | --- | --- | --- |
+| `better-auth` | `^1.6.22` | `^1.6.22` | Synced |
+| `@better-auth/infra` | `^0.3.4` | `^0.3.4` | Synced; `auditLogs` not yet exported — see TODO |
+| `@neondatabase/serverless` | `^1.1.0` | `^1.1.0` | Synced |
+| `cloudflare` | `^6.5.0` | `^6.5.0` | Synced |
+| `@prisma/adapter-pg` | `^7.5.0` | `^7.5.0` | Synced |
+| `pg` | `^8.21.0` | `^8.21.0` | Synced |
+
+> <strong>Important:</strong> `deno.json` and `package.json` must be kept in sync. The deployed Cloudflare Worker is bundled by wrangler using `package.json`/`pnpm`. Deno tests run against `deno.json`. A version skew causes tests to pass against library behaviour that the production worker does not have.
+
+---
+
+## Known Failure Modes
+
+### ❶ "BetterAuthError: Model 'session' not found in schema"
+
+<strong>When:</strong> `BETTER_AUTH_KV` binding is present (KV secondary storage enabled) and `storeSessionInDatabase` is not set.
+
+<strong>Cause:</strong> Better Auth 1.6.x excludes the session model from the internal DB schema when `secondaryStorage` is provided. Without `storeSessionInDatabase: true`, every sign-in attempt fails with this error.
+
+<strong>Fix:</strong> Verify `AUTH_SESSION_STORE_IN_DATABASE = true` is wired into the `betterAuth()` call's `session.storeSessionInDatabase` field. This is enforced as a named constant in `worker/lib/auth.ts` and tested in `worker/lib/auth.test.ts`.
+
+```typescript
+// worker/lib/auth.ts
+export const AUTH_SESSION_STORE_IN_DATABASE = true as const;
+
+// Passed to betterAuth():
+session: {
+    storeSessionInDatabase: AUTH_SESSION_STORE_IN_DATABASE,
+    ...
+}
+```
+
+---
+
+### ❷ "invalid input syntax for type uuid" on sign-up
+
+<strong>When:</strong> Better Auth generates an opaque alphanumeric ID (e.g. `NqEqNgrxWWaQnyBqb9SLtbGG0ODl2TK2`) for a User, Session, Account, or other model with a `@db.Uuid` column.
+
+<strong>Cause:</strong> Better Auth 1.5.x/1.6.x does not always call `advanced.generateId` before passing IDs to the Prisma adapter. PostgreSQL's `uuid` column type rejects non-UUID strings.
+
+<strong>Fix:</strong> Two-layer defence:
+
+1. **Prisma `$extends` query extension** in `worker/lib/prisma.ts` — intercepts every `create` on Better Auth models and replaces non-UUID `data.id` values with `crypto.randomUUID()`.
+2. <strong>`advanced.generateId`</strong> in `worker/lib/auth.ts` — `AUTH_ID_GENERATOR = () => crypto.randomUUID()` covers code paths where Better Auth calls `generateId` directly.
+
+The set of guarded models is: `User`, `Session`, `Account`, `Verification`, `TwoFactor`, `Organization`, `Member` (both PascalCase and lowercase variants, as Prisma 7.x normalises casing inconsistently).
+
+<strong>Diagnostic:</strong>
+
+```bash
+# Check for "invalid input syntax for type uuid" in wrangler tail output
+wrangler tail bloqr-backend --format=pretty | grep "uuid"
+```
+
+---
+
+### ❸ Users not visible in the Better Auth Dash dashboard
+
+<strong>Cause:</strong> `BETTER_AUTH_API_KEY` and/or `BETTER_AUTH_KV_URL` secrets are not set on the `bloqr-backend` worker. The `dash()` plugin gracefully no-ops when these are absent (no error, but no sync).
+
+<strong>Fix:</strong>
+
+```bash
+# Set on bloqr-backend (where Better Auth runs), not bloqr-frontend
+wrangler secret put BETTER_AUTH_API_KEY --name bloqr-backend
+wrangler secret put BETTER_AUTH_KV_URL --name bloqr-backend
+# Value for BETTER_AUTH_KV_URL:
+# https://api.cloudflare.com/client/v4/accounts/<resource-id>/storage/kv/namespaces/<resource-id>
+```
+
+<strong>Verify:</strong> After setting secrets and deploying, trigger a sign-up and check the [Better Auth Dash dashboard](https://dash.better-auth.com).
+
+---
+
+### ❹ Sign-in returns 404 on all `/api/auth/*` endpoints
+
+<strong>Cause:</strong> `BETTER_AUTH_SECRET` is not set on `bloqr-backend`. The Hono route guard returns `c.notFound()` (HTTP 404) for every auth request when this secret is absent.
+
+```typescript
+// worker/hono-app.ts — early-return guard
+if (!c.env.BETTER_AUTH_SECRET) return c.notFound();
+```
+
+<strong>Fix:</strong>
+
+```bash
+wrangler secret put BETTER_AUTH_SECRET --name bloqr-backend
+# Generate a value: openssl rand -base64 32
+```
+
+<strong>Diagnostic:</strong>
+
+```bash
+curl -sS -X POST https://app.bloqr.dev/api/auth/sign-in/email \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@example.com","password":"wrong"}' \
+  -w "\nHTTP %{http_code}\n"
+# 404 → BETTER_AUTH_SECRET not set
+# 503 → HYPERDRIVE binding missing
+# 401 or 422 → credential/verification error (auth is working)
+```
+
+---
+
+### ❺ Sign-in returns 503 (HYPERDRIVE binding missing)
+
+<strong>Cause:</strong> After the monolith split (bloqr-compiler → bloqr-frontend + bloqr-backend), the new `bloqr-backend` worker was deployed without the Hyperdrive binding configured, or before the Hyperdrive was provisioned.
+
+<strong>Fix:</strong>
+
+```bash
+# Check wrangler.toml has [[hyperdrive]] block
+# Then verify the ID exists:
+wrangler hyperdrive list
+
+# Redeploy after adding [[hyperdrive]] to wrangler.toml
+wrangler deploy
+```
+
+---
+
+### ❻ Email verification blocks sign-in for all new users
+
+<strong>Cause:</strong> `RESEND_API_KEY` is set (or `SEND_EMAIL` binding is bound), which enables `hasViableEmailProvider`, which sets `requireEmailVerification: true`. If verification emails are not being delivered (e.g. Resend API key is invalid), newly registered users can never sign in.
+
+<strong>Fix:</strong>
+
+```bash
+# Check if RESEND_API_KEY is set:
+wrangler secret list --name bloqr-backend
+
+# If set but broken, test delivery:
+curl -sS https://app.bloqr.dev/api/auth/sign-up/email \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"youraddress@example.com","password":"Test1234!","name":"Test"}' | jq .
+# Check your inbox for the verification email
+
+# Temporarily disable by removing RESEND_API_KEY if needed:
+wrangler secret delete RESEND_API_KEY --name bloqr-backend
+wrangler deploy --name bloqr-backend
+```
+
+---
+
+### ❼ `@neondatabase/serverless` / Cloudflare SDK version skew
+
+<strong>When:</strong> Tests pass in CI (Deno) but production shows different behaviour.
+
+<strong>Cause:</strong> `deno.json` and `package.json` had different versions of `@neondatabase/serverless` (`^0.10.0` vs `^1.1.0`) and `cloudflare` SDK (`^5.2.0` vs `^6.3.0`). This was resolved on 2026-06-29 — see the upgrade summary below.
+
+<strong>Fix:</strong> Keep `deno.json` and `package.json` versions in sync. The `_syncNote` field in `package.json` documents this requirement. After updating either file, run `pnpm install` to regenerate `pnpm-lock.yaml`.
+
+---
+
+## Upgrade Summary (2026-06-29)
+
+| Package | Before | After | Files Changed |
+| --- | --- | --- | --- |
+| `better-auth` (deno.json) | `^1.5.6` | `^1.6.22` | `deno.json` |
+| `better-auth` (package.json) | `^1.6.11` | `^1.6.22` | `package.json`, `pnpm-lock.yaml` |
+| `@better-auth/infra` (both) | `^0.2.13` | `^0.3.4` | `deno.json`, `package.json`, `pnpm-lock.yaml` |
+| `@neondatabase/serverless` (deno.json) | `^0.10.0` | `^1.1.0` | `deno.json` |
+| `cloudflare` SDK (deno.json) | `^5.2.0` | `^6.5.0` | `deno.json` |
+| `cloudflare` SDK (package.json) | `^6.3.0` | `^6.5.0` | `package.json`, `pnpm-lock.yaml` |
+
+The `@neondatabase/serverless` package is used only in `src/services/neonApiService.ts` and `scripts/record-deployment.ts` via the `neon()` tagged-template function. The function signature is unchanged between 0.x and 1.x.
+
+The `cloudflare` SDK (the official Cloudflare REST API TypeScript client) is used only in `src/services/cloudflareApiService.ts` and `scripts/migrate-d1-to-neon.ts` via the `Cloudflare` default export. The SDK is auto-generated from the Cloudflare API spec and the default import pattern is unchanged.
+
+---
+
+## Pending: `auditLogs` Plugin
+
+`@better-auth/infra` has planned support for an `auditLogs()` plugin that records all auth events (sign-in, sign-up, token refresh, role changes, bans, etc.) to the database. As of `@better-auth/infra@0.3.4`, this export does not exist. The code contains a TODO comment in `worker/lib/auth.ts` with a placeholder — enable it once the package publishes the export.
+
+---
+
+## Diagnostic Commands
+
+```bash
+# 1. Check which secrets are set on bloqr-backend
+wrangler secret list --name bloqr-backend
+
+# 2. Live test — auth endpoint status
+curl -sS -X POST https://app.bloqr.dev/api/auth/sign-in/email \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"test@example.com","password":"wrong"}' \
+  -w "\nHTTP %{http_code}\n"
+
+# 3. Health check — shows per-service status including auth, database, cache
+curl -sS https://app.bloqr.dev/health | jq .
+
+# 4. Check Hyperdrive binding
+wrangler hyperdrive list
+
+# 5. Tail live worker logs
+wrangler tail bloqr-backend --format=pretty
+```
+
+---
+
+## Related KB Articles
+
+- [KB-001](/troubleshooting/kb-001-api-not-available) — "Getting API is not available" on the main page (covers `/api/version`, `/api/clerk-config`, etc.)
+- [KB-002](/troubleshooting/kb-002-hyperdrive-database-down) — Hyperdrive binding connected but `database` service reports `down`
+- [KB-003](/troubleshooting/kb-003-neon-hyperdrive-live-session-2026-03-25) — Database Down After Deploy — Live Debugging Session (2026-03-25)
+- [KB-005](/troubleshooting/kb-005-better-auth-cloudflare-ip-timeout) — Better Auth Cloudflare: Worker CPU timeout & rate limiting skipped
+
+---
+
+## Feedback & Contribution
+
+If you discover a new failure mode while using this article, open an issue tagged `troubleshooting` and `documentation` in `bloqr-systems/bloqr-compiler` with details so it can be captured in a follow-up KB entry.

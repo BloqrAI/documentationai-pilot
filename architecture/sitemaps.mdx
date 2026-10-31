@@ -1,0 +1,373 @@
+---
+title: Sitemaps & SEO Discovery
+description: "This document describes the sitemap architecture across the Bloqr platform's three public surfaces: the marketing landing page, the Angular frontend..."
+---
+
+# Sitemaps & SEO Discovery
+
+This document describes the sitemap architecture across the Bloqr platform's three public surfaces: the marketing landing page, the Angular frontend application, and the API Worker.
+
+## Overview
+
+All three surfaces expose **sitemap indexes** and **sitemaps** to enable search engine discovery. Each surface uses the most appropriate generation strategy for its deployment model:
+
+- **Landing Page** (`bloqr.dev`) — Static, generated at build time by Astro
+- **Frontend** (`app.bloqr.dev`) — Dynamic, generated at request time by the Cloudflare Worker
+- **API Worker** (`api.bloqr.dev`) — Dynamic, generated at request time; intentionally empty (all routes disallowed)
+
+Discovery is facilitated via `robots.txt` on each domain, which includes a `Sitemap:` directive pointing crawlers to the sitemap index.
+
+## Landing Page (`bloqr.dev`)
+
+### Generation
+
+Configured via `@astrojs/sitemap` in `astro.config.mjs`:
+
+```javascript
+sitemap({
+  filter: (page) =>
+    !page.includes('/admin/') &&
+    !page.includes('/og/'),
+  serialize(item) {
+    // Per-section priority and changefreq assignment
+    const path = item.url.replace(/^https?:\/\/[^/]+/, '');
+    if (path === '') return { ...item, priority: 1.0, changefreq: 'daily' };
+    if (path.startsWith('/blog/')) return { ...item, priority: 0.8, changefreq: 'monthly' };
+    // ... etc.
+  },
+})
+```
+
+### URLs
+
+| URL | Type | Generated | Content |
+| --- | --- | --- | --- |
+| `/sitemap-index.xml` | Static XML | Build time (Astro) | Points to `/sitemap-0.xml` |
+| `/sitemap-0.xml` | Static XML | Build time (Astro) | All public pages with priorities & change frequencies |
+
+### Cache Headers
+
+- Served as static assets from Cloudflare ASSETS binding
+- Default Cloudflare CDN cache (browser: 4 hours, edge: 30 days)
+
+### Priority & Change Frequency
+
+```
+/                 → 1.0 / daily      (home page)
+/pricing, /about  → 0.9 / weekly     (key landing pages)
+/blog             → 0.85 / daily     (blog index)
+/blog/*           → 0.8 / monthly    (individual posts)
+/changelog        → 0.75 / weekly    (version history)
+/privacy, /terms  → 0.4 / yearly     (legal pages)
+other pages       → 0.6 / weekly     (default)
+```
+
+### Exclusions
+
+- `/admin/*` — CMS administration routes (internal use)
+- `/og/*` — OG image generation endpoints (technical, not indexable)
+
+### Discovery
+
+```
+robots.txt:
+  Sitemap: https://bloqr.dev/sitemap-index.xml
+```
+
+---
+
+## Frontend Application (`app.bloqr.dev`)
+
+### Generation
+
+Dynamically generated on each request by the Cloudflare Worker SSR handler in `frontend/server.ts`:
+
+```typescript
+function buildSitemapXml(origin: string): string {
+  const today = new Date().toISOString().split('T')[0];
+  return `<?xml version="1.0"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+      ${PUBLIC_ROUTES.map(r => `
+        <url>
+          <loc>${origin}${r.path}</loc>
+          <lastmod>${today}</lastmod>
+          <changefreq>${r.changefreq}</changefreq>
+          <priority>${r.priority}</priority>
+        </url>`).join('')}
+    </urlset>`;
+}
+```
+
+### URLs
+
+| URL | Type | Generated | Content |
+| --- | --- | --- | --- |
+| `/sitemap-index.xml` | Dynamic XML | On request (Worker) | Points to `/sitemap.xml` with today's date |
+| `/sitemap.xml` | Dynamic XML | On request (Worker) | All public Angular routes with priorities & frequencies |
+
+### Worker Routing — `run_worker_first`
+
+Cloudflare Workers with a `[assets]` binding serve static files from the CDN edge
+**before** the Worker's `fetch` handler runs ("assets-first routing"). Because
+`/sitemap.xml` and `/sitemap-index.xml` are generated dynamically and have no
+matching static file, `not_found_handling = "single-page-application"` would
+otherwise serve `index.html` for them — Angular's client router then renders
+the 404 page instead of XML ever reaching the browser.
+
+`frontend/wrangler.toml` opts these two paths out of assets-first routing:
+
+```toml
+[assets]
+...
+run_worker_first = ["/sitemap.xml", "/sitemap-index.xml"]
+```
+
+This forces the Worker's `fetch` handler to run first for exactly these paths,
+so the dynamic XML handlers in `server.ts` are reachable.
+
+### Cache Headers
+
+```
+Content-Type: application/xml; charset=utf-8
+Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+X-Content-Type-Options: nosniff
+CDN-Cache-Control: no-store
+```
+
+- <strong>3600s (1 hour)</strong> — standard browser/crawler cache
+- <strong>86400s (24 hours)</strong> — stale-while-revalidate (serve stale while refreshing in background)
+- <strong>`CDN-Cache-Control: no-store`</strong> — tells Cloudflare's edge not to cache the response independently of the above. Without this, Cloudflare can keep serving a pre-deploy response (e.g. a 404 captured before this feature shipped) for the full edge TTL after a redeploy, since edge caching is evaluated before the Worker runs again.
+- Allows for up-to-date lastmod timestamps without excessive recomputation
+
+### Public Routes (Included in Sitemap)
+
+Only routes **without** `canActivate` guards are included:
+
+```
+/                       → 1.0 / daily
+/api-docs              → 0.9 / weekly
+/pricing               → 0.9 / weekly
+/config-builder        → 0.8 / weekly
+/sign-up               → 0.7 / monthly
+/sign-in               → 0.6 / monthly
+/forgot-password       → 0.3 / monthly
+/reset-password        → 0.3 / monthly
+```
+
+### Exclusions (Auth-Gated Routes)
+
+The following routes are **intentionally excluded** because they require authentication:
+
+- `/compiler`
+- `/performance`
+- `/validation`
+- `/diff`
+- `/ast-viewer`
+- `/api-keys`
+- `/profile`
+- `/block-list`
+- `/admin/*`
+
+### Discovery
+
+```
+robots.txt:
+  Sitemap: https://app.bloqr.dev/sitemap-index.xml
+  Sitemap: https://app.bloqr.dev/sitemap.xml
+```
+
+---
+
+## API Worker (`api.bloqr.dev`)
+
+### Generation
+
+Dynamically generated on each request by `worker/hono-app.ts`. Unlike the other surfaces, the API's sitemap is intentionally **empty** because:
+
+1. All API routes live under `/api/*` which `robots.txt` explicitly disallows
+2. API discovery is already provided by the OpenAPI specification (`/api/openapi.json`)
+3. The sitemap index is provided for well-formedness and future extensibility
+
+### URLs
+
+| URL | Type | Generated | Content |
+| --- | --- | --- | --- |
+| `/sitemap-index.xml` | Dynamic XML | On request (Worker) | Points to `/sitemap.xml` with today's date |
+| `/sitemap.xml` | Dynamic XML | On request (Worker) | Empty `<urlset>` with dated comment |
+
+### Cache Headers
+
+```
+Content-Type: application/xml; charset=utf-8
+Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+X-Content-Type-Options: nosniff
+CDN-Cache-Control: no-store
+```
+
+Same as frontend for consistency, including `CDN-Cache-Control: no-store` to
+prevent Cloudflare's edge from caching a pre-deploy response across deploys
+(see the Frontend section above for the full explanation).
+
+### Example Response (`/sitemap.xml`)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <!-- api.bloqr.dev — all routes are under /api/ which is disallowed by robots.txt (2026-06-29) -->
+</urlset>
+```
+
+### Why Empty?
+
+- **robots.txt** disallows `/api/` for all crawlers
+- **OpenAPI** (`/api/openapi.json`) is the authoritative API discovery mechanism
+- API endpoints are not SEO-relevant (no user-facing content)
+- Empty urlset maintains protocol compliance and future flexibility
+
+### Discovery
+
+```
+robots.txt:
+  Sitemap: https://api.bloqr.dev/sitemap-index.xml
+```
+
+---
+
+## Robots.txt Files
+
+### `bloqr.dev` (Landing Page)
+
+```
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+# AI crawlers — explicitly permitted for AEO indexing
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Sitemap: https://bloqr.dev/sitemap-index.xml
+```
+
+### `app.bloqr.dev` (Frontend)
+
+```
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /api/
+
+Sitemap: https://app.bloqr.dev/sitemap-index.xml
+Sitemap: https://app.bloqr.dev/sitemap.xml
+```
+
+### `api.bloqr.dev` (API Worker)
+
+```
+User-agent: *
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: https://api.bloqr.dev/sitemap-index.xml
+```
+
+---
+
+## HEAD Requests and Pre-Auth Bypass
+
+Google Search Console (and other sitemap validators) commonly send a `HEAD`
+request to a sitemap URL before issuing the real `GET` — e.g. to check
+availability and `Content-Type` cheaply. The API Worker's unified
+auth middleware (`worker/hono-app.ts`) bypasses authentication for a fixed
+list of public paths (`PRE_AUTH_PATHS`, which includes `/sitemap.xml` and
+`/sitemap-index.xml`), but originally only for `GET` requests. A `HEAD`
+request fell through to full authentication and received a `403`, even
+though the equivalent `GET` succeeded — this caused Search Console to report
+"Couldn't fetch" for `api.bloqr.dev`'s sitemaps despite them working
+correctly for ordinary browser/crawler `GET` requests.
+
+The fix allows `HEAD` alongside `GET` for all `PRE_AUTH_PATHS` bypass checks,
+since `HEAD` is a strict subset of `GET` semantics (same headers/status, no
+body) for these read-only public endpoints.
+
+If Search Console (or another crawler) still reports fetch failures after
+this fix, check Cloudflare's zone-level Bot Fight Mode / Super Bot Fight Mode
+and WAF settings for `app.bloqr.dev` and `api.bloqr.dev` — these can block
+crawler requests with a `403` before the Worker ever runs, which is not
+something application code can detect or fix.
+
+---
+
+## Search Engine Workflow
+
+1. **Crawler visits domain** → downloads `robots.txt`
+2. **robots.txt parsed** → discovers `Sitemap:` directive(s)
+3. **Sitemap index fetched** → lists all sitemaps
+4. **Each sitemap fetched** → discovers all pages with metadata
+5. **Pages crawled** → indexed by priority and change frequency
+
+---
+
+## Cache Considerations
+
+### Landing Page (`bloqr.dev`)
+
+- Static sitemaps cached by Cloudflare CDN (long TTL)
+- Regenerated only at next build deployment
+- No per-request overhead
+
+### Frontend & API (`app.bloqr.dev`, `api.bloqr.dev`)
+
+- Dynamic sitemaps regenerated on every request
+- **1-hour standard cache** allows for reasonable freshness without overwhelming the Worker
+- **24-hour stale-while-revalidate** ensures availability during revalidation
+- `lastmod` always reflects the current date (more conservative than per-route timestamps)
+- Header `X-Content-Type-Options: nosniff` prevents MIME-type sniffing attacks
+
+---
+
+## Testing & Validation
+
+### Automated
+
+- Unit tests in `worker/hono-app.test.ts` verify sitemap endpoints return valid XML
+- Tests confirm sitemap-index.xml is in `PRE_AUTH_PATHS` (publicly accessible)
+- CI validates XML structure before merging
+
+### Manual
+
+```bash
+# Frontend sitemap
+curl https://app.bloqr.dev/sitemap.xml | xmllint --format -
+
+# API sitemap
+curl https://api.bloqr.dev/sitemap.xml | xmllint --format -
+
+# Landing sitemaps (in built dist/)
+cat dist/sitemap-index.xml | xmllint --format -
+```
+
+### Search Console Integration
+
+1. Submit each sitemap to Google Search Console
+2. Monitor coverage and crawl stats per domain
+3. Check for any reported errors (malformed XML, broken links, etc.)
+
+---
+
+## Future Considerations
+
+1. **Per-route timestamps**: Instead of `lastmod={today}`, track when each route was last modified
+2. **Sitemap splitting**: If page count exceeds 50,000, split into multiple sitemaps (currently well under this limit)
+3. **Conditional routes**: If feature flags or user tiers gate certain pages, update `PUBLIC_ROUTES` dynamically
+4. **Analytics integration**: Track crawler visits to each sitemap endpoint via `Server-Timing` headers

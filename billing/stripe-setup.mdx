@@ -1,0 +1,190 @@
+---
+title: Stripe Setup Guide
+description: This guide covers the Stripe configuration required by the Worker billing integration.
+---
+
+# Stripe Setup Guide
+
+This guide covers the Stripe configuration required by the Worker billing integration.
+
+---
+
+## 1\. Required Stripe resources
+
+Bloqr expects Stripe to contain:
+
+- **Base subscription products / prices** matching `SUBSCRIPTION_TIER_LIMITS` and `SubscriptionPlan`
+- **Add-on products / prices** for feature-flagged extras such as AST storage, translation, global sharing, batch API, and CDN distribution
+- **One PAYG price** referenced by `STRIPE_PAYG_PRICE_ID`
+- **Webhook endpoints** for both live and test mode pointing to `https://api.bloqr.dev/api/webhook/stripe` (legacy `https://api.bloqr.dev/api/stripe/webhook` remains supported)
+- **Meters** for usage-based billing exports
+- **Customer Portal** enabled for self-serve plan changes and payment-method updates
+- **Stripe Tax** enabled before live invoicing
+
+All base subscription prices should use `trial_period_days = 7`. Add-on prices should use the shorter 1–2 day trials defined for the add-on.
+
+---
+
+## 2\. Worker configuration
+
+### Runtime variables (`wrangler.toml`)
+
+`STRIPE_BILLING_MODE` is a non-secret Worker variable, so it belongs in `wrangler.toml [vars]` rather than `wrangler secret`.
+
+```toml
+[vars]
+STRIPE_BILLING_MODE = "live"
+PAYG_PRICE_PER_CALL_USD_CENTS = "1"
+PAYG_CONVERSION_THRESHOLD_USD_CENTS = "2000"
+```
+
+`[env.staging.vars]` should override `STRIPE_BILLING_MODE = "sandbox"`.
+
+### Secrets
+
+Configure both live and sandbox credentials because one Worker instance can serve both modes at the same time. That lets production keep live billing enabled while selected developer, staging, or sandbox accounts are forced onto Stripe test mode through `BILLING_MODE_OVERRIDES`.
+
+```bash
+wrangler secret put STRIPE_SECRET_KEY
+wrangler secret put STRIPE_WEBHOOK_SECRET
+wrangler secret put STRIPE_TEST_SECRET_KEY
+wrangler secret put STRIPE_TEST_WEBHOOK_SECRET
+```
+
+### KV bindings
+
+Provision and bind:
+
+- `BILLING_MODE_OVERRIDES`
+- `USAGE_LEDGER`
+
+`BILLING_MODE_OVERRIDES` stores `live` / `sandbox` per user or organization. `USAGE_LEDGER` stores rolling usage counters for Stripe metering and invoice preparation.
+
+### Webhook idempotency
+
+Bind `STRIPE_WEBHOOK_PROCESSOR` so Stripe webhook delivery is deduplicated per event ID. If that Durable Object is not bound, webhook processing still works, but duplicate Stripe deliveries can be processed more than once.
+
+---
+
+## 3\. Per-request billing mode resolution
+
+`worker/services/stripe-service.ts` resolves Stripe mode per request:
+
+1. Read `BILLING_MODE_OVERRIDES` for the organization ID first, then the user ID.
+2. Fall back to `STRIPE_BILLING_MODE`.
+3. Use the matching live or sandbox secret key pair.
+
+Webhook verification is dual-mode as well: the Worker attempts signature verification against the live webhook secret and the test webhook secret, then enforces that the verified event `livemode` matches the secret that succeeded.
+
+---
+
+## 4\. PAYG Checkout flow
+
+`POST /api/stripe/payg/checkout` creates a Stripe Checkout Session directly against the Stripe REST API.
+
+Request body:
+
+```json
+{
+  "requestsToPurchase": 10,
+  "successUrl": "https://app.bloqr.dev/pricing?checkout=success",
+  "cancelUrl": "https://app.bloqr.dev/pricing?checkout=canceled"
+}
+```
+
+The Worker attaches metadata for reconciliation:
+
+- `requestsToPurchase`
+- `userId` when authenticated
+- `organizationId` when available
+
+After a successful Checkout redirect, the client exchanges the completed `checkoutSessionId` or `paymentIntentId` at `POST /api/payg/session/create`.
+
+---
+
+## 5\. Webhook configuration
+
+Create **two** webhook endpoints in Stripe using the preferred hono-stripe path:
+
+### Live mode
+
+- URL: `https://api.bloqr.dev/api/webhook/stripe`
+- Secret → `STRIPE_WEBHOOK_SECRET`
+
+### Test mode
+
+- URL: `https://api.bloqr.dev/api/webhook/stripe`
+- Secret → `STRIPE_TEST_WEBHOOK_SECRET`
+
+Subscribe both endpoints to:
+
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `customer.subscription.trial_will_end`
+- `invoice.payment_succeeded`
+- `invoice.payment_failed`
+- `checkout.session.completed`
+- `payment_intent.succeeded`
+
+The preferred webhook path is `POST /api/webhook/stripe`. The legacy `POST /api/stripe/webhook` route remains wired into the same verification and processing pipeline for backwards compatibility. Both paths are protected by the `StripeWebhookProcessor` Durable Object for idempotent delivery handling.
+
+---
+
+## 6\. Database sync responsibilities
+
+Webhook processing updates:
+
+- `PaygCustomer`, `PaygPaymentEvent`, `PaygSession` for PAYG payments
+- `User` / `Organization` subscription tier state for subscription lifecycle events
+- Email notifications for trial-ending and payment-failed cases
+
+Separately, the schema includes the billing support tables required for fuller catalog and invoicing sync:
+
+- `StripeProductCache`
+- `BillingUsageEvent`
+- `CloudflareUsageSnapshot`
+- `BillingModeOverride`
+
+---
+
+## 7\. Operational checklist
+
+Before go-live, verify all of the following:
+
+- [ ] Live and test Stripe API keys are set in Worker secrets
+- [ ] Live and test webhook secrets are set in Worker secrets
+- [ ] `STRIPE_BILLING_MODE` is set appropriately per environment
+- [ ] `BILLING_MODE_OVERRIDES` and `USAGE_LEDGER` KV namespaces are provisioned and bound
+- [ ] `STRIPE_PAYG_PRICE_ID` points at the intended PAYG Stripe price
+- [ ] Subscription and add-on products include metadata aligning with plan tier / addon keys
+- [ ] Stripe Tax is enabled
+- [ ] Stripe Customer Portal is enabled
+- [ ] Webhooks are delivering successfully in both modes
+
+---
+
+## 8\. Testing
+
+### Stripe CLI
+
+```bash
+stripe listen --forward-to http://localhost:8787/api/webhook/stripe
+stripe trigger payment_intent.succeeded
+stripe trigger checkout.session.completed
+```
+
+### Recommended test cards
+
+| Card | Result |
+| --- | --- |
+| `4242 4242 4242 4242` | Success |
+| `4000 0000 0000 0002` | Declined |
+| `4000 0025 0000 3155` | 3D Secure required |
+
+---
+
+## Related Documentation
+
+- [Billing Overview](/billing/readme)
+- [PAYG Developer Guide](/billing/payg)

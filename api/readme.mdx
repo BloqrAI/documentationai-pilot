@@ -1,0 +1,2634 @@
+---
+title: Bloqr™ Compiler API
+description: Returns API version, available endpoints, and usage examples
+---
+
+# Bloqr™ Compiler API
+
+<strong>Version:</strong> 2.0.0
+
+## Description
+
+**Compiler-as-a-Service** for adblock filter lists. Transform, optimize, and combine filter lists from multiple sources with real-time progress tracking.
+
+## Features
+
+- 🎯 Multi-Source Compilation
+- ⚡ Performance (Gzip compression, caching, request deduplication)
+- 🔄 Circuit Breaker with retry logic
+- 📊 Visual Diff between compilations
+- 📡 Real-time progress via SSE and WebSocket
+- 🎪 Batch Processing
+- 🌍 Universal (Deno, Node.js, Bun, Cloudflare Workers, browsers)
+
+## Links
+
+- [GitHub Repository](https://github.com/bloqr-systems/bloqr-compiler)
+- [Documentation](https://github.com/bloqr-systems/bloqr-compiler/tree/master/docs)
+- [Web UI](https://api.bloqr.dev/)
+
+## Servers
+
+- **Production server**: `https://api.bloqr.dev`
+- **Local development server**: `http://localhost:8787`
+
+## Endpoints
+
+### Metrics
+
+#### `GET /api`
+
+<strong>Summary:</strong> Get API information
+
+Returns API version, available endpoints, and usage examples
+
+<strong>Operation ID:</strong> `getApiInfo`
+
+<strong>Responses:</strong>
+
+- `200`: API information
+
+---
+
+#### `GET /metrics`
+
+<strong>Summary:</strong> Get performance metrics
+
+Returns aggregated metrics for the last 30 minutes
+
+<strong>Operation ID:</strong> `getMetrics`
+
+<strong>Responses:</strong>
+
+- `200`: Performance metrics
+
+---
+
+#### `GET /api/version`
+
+<strong>Summary:</strong> Get latest deployment version
+
+Returns the current version from deployment history
+
+<strong>Operation ID:</strong> `getApiVersion`
+
+<strong>Responses:</strong>
+
+- `200`: Version information
+- `503`: No description
+
+---
+
+#### `GET /api/deployments`
+
+<strong>Summary:</strong> Get deployment history
+
+Returns deployment history records
+
+<strong>Operation ID:</strong> `getDeployments`
+
+<strong>Parameters:</strong>
+
+- `limit` (query): Maximum number of records to return
+- `version` (query): Filter by version
+- `status` (query): Filter by deployment status
+- `branch` (query): Filter by branch name
+
+<strong>Responses:</strong>
+
+- `200`: Deployment history
+- `503`: No description
+
+---
+
+#### `GET /api/deployments/stats`
+
+<strong>Summary:</strong> Get deployment statistics
+
+Returns aggregated deployment statistics
+
+<strong>Operation ID:</strong> `getDeploymentStats`
+
+<strong>Responses:</strong>
+
+- `200`: Deployment statistics
+- `503`: No description
+
+---
+
+#### `GET /api/turnstile-config`
+
+<strong>Summary:</strong> Get Turnstile configuration
+
+Returns the Cloudflare Turnstile site key and whether it is enabled
+
+<strong>Operation ID:</strong> `getTurnstileConfig`
+
+<strong>Responses:</strong>
+
+- `200`: Turnstile configuration
+
+---
+
+### Info
+
+#### `GET /api/schemas`
+
+<strong>Summary:</strong> Get JSON Schemas for all public request/response types
+
+Returns JSON Schema representations of all public Zod schemas
+(ConfigurationSchema, CompileRequestSchema, SourceSchema, BenchmarkMetricsSchema)
+for use by API testers and external tooling.
+Anonymous access. Cached for 1 hour.
+
+<strong>Operation ID:</strong> `getApiSchemas`
+
+<strong>Responses:</strong>
+
+- `200`: JSON Schema definitions.
+- `429`: No description
+
+---
+
+### Compilation
+
+#### `POST /compile`
+
+<strong>Summary:</strong> Compile filter list (JSON)
+
+Compile filter lists and return results as JSON. Results are cached for 1 hour.
+Supports request deduplication for concurrent identical requests.
+
+<strong>Operation ID:</strong> `compileJson`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`CompileRequest`](#compilerequest)
+
+<strong>Responses:</strong>
+
+- `200`: Compilation successful
+- `400`: No description
+- `429`: No description
+- `500`: No description
+
+---
+
+#### `POST /compile/batch`
+
+<strong>Summary:</strong> Batch compile multiple lists
+
+Compile multiple filter lists in parallel (max 10 per batch)
+
+<strong>Operation ID:</strong> `compileBatch`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`BatchCompileRequest`](#batchcompilerequest)
+
+<strong>Responses:</strong>
+
+- `200`: Batch compilation results
+- `400`: No description
+- `429`: No description
+
+---
+
+#### `POST /ast/parse`
+
+<strong>Summary:</strong> Parse filter rules into AST
+
+Parses adblock filter rules into an Abstract Syntax Tree representation
+
+<strong>Operation ID:</strong> `parseAST`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`ASTParseRequest`](#astparserequest)
+
+<strong>Responses:</strong>
+
+- `200`: Parsed AST
+- `400`: Invalid request (must provide rules or text)
+- `500`: Parse error
+
+---
+
+### Streaming
+
+#### `POST /compile/stream`
+
+<strong>Summary:</strong> Compile with real-time progress (SSE)
+
+Compile filter lists with real-time progress updates via Server-Sent Events.
+Streams events including source downloads, transformations, diagnostics, cache operations, network events, and metrics.
+
+<strong>Operation ID:</strong> `compileStream`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`CompileRequest`](#compilerequest)
+
+<strong>Responses:</strong>
+
+- `200`: Event stream
+- `400`: No description
+- `429`: No description
+
+---
+
+### Queue
+
+#### `POST /compile/async`
+
+<strong>Summary:</strong> Queue async compilation job
+
+Queue a compilation job for asynchronous processing. Returns immediately with a request ID.
+Use GET /queue/results/&#123;requestId&#125; to retrieve results when complete.
+
+<strong>Operation ID:</strong> `compileAsync`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`CompileRequest`](#compilerequest)
+
+<strong>Responses:</strong>
+
+- `202`: Job queued successfully
+- `400`: No description
+- `500`: No description
+
+---
+
+#### `POST /compile/batch/async`
+
+<strong>Summary:</strong> Queue batch async compilation
+
+Queue multiple compilations for async processing
+
+<strong>Operation ID:</strong> `compileBatchAsync`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`BatchCompileRequest`](#batchcompilerequest)
+
+<strong>Responses:</strong>
+
+- `202`: Batch queued successfully
+- `400`: No description
+- `500`: No description
+
+---
+
+#### `GET /queue/stats`
+
+<strong>Summary:</strong> Get queue statistics
+
+Returns queue health metrics and job statistics
+
+<strong>Operation ID:</strong> `getQueueStats`
+
+<strong>Responses:</strong>
+
+- `200`: Queue statistics
+
+---
+
+#### `GET /queue/results/{requestId}`
+
+<strong>Summary:</strong> Get async job results
+
+Retrieve results for a completed async compilation job
+
+<strong>Operation ID:</strong> `getQueueResults`
+
+<strong>Parameters:</strong>
+
+- `requestId` (path) (required): Request ID returned from async endpoints
+
+<strong>Responses:</strong>
+
+- `200`: Job results
+- `404`: Job not found
+
+---
+
+#### `GET /queue/history`
+
+<strong>Summary:</strong> Get queue job history
+
+Returns job history and queue depth over time
+
+<strong>Operation ID:</strong> `getQueueHistory`
+
+<strong>Responses:</strong>
+
+- `200`: Queue history
+
+---
+
+#### `DELETE /queue/cancel/{requestId}`
+
+<strong>Summary:</strong> Cancel a pending queue job
+
+Cancels a pending queue job by its requestId.
+Returns 409 if the job is already completed, failed, or cancelled.
+Requires authentication (free tier or above).
+
+<strong>Operation ID:</strong> `cancelQueueJob`
+
+<strong>Parameters:</strong>
+
+- `requestId` (path) (required): The requestId of the queue job to cancel.
+
+<strong>Responses:</strong>
+
+- `200`: Job cancelled successfully.
+- `400`: No description
+- `401`: No description
+- `403`: Cloudflare Access JWT invalid or missing.
+- `429`: No description
+
+---
+
+### WebSocket
+
+#### `GET /ws/compile`
+
+<strong>Summary:</strong> WebSocket endpoint for real-time compilation
+
+Bidirectional WebSocket connection for real-time compilation with event streaming.
+
+<strong>Client → Server Messages:</strong>
+
+- `compile` \- Start compilation
+- `cancel` \- Cancel running compilation
+- `ping` \- Heartbeat ping
+
+<strong>Server → Client Messages:</strong>
+
+- `welcome` \- Connection established
+- `pong` \- Heartbeat response
+- `compile:started` \- Compilation started
+- `event` \- Compilation event (source, transformation, progress, diagnostic, cache, network, metric)
+- `compile:complete` \- Compilation finished successfully
+- `compile:error` \- Compilation failed
+- `compile:cancelled` \- Compilation cancelled
+- `error` \- Error message
+
+<strong>Features:</strong>
+
+- Up to 3 concurrent compilations per connection
+- Automatic heartbeat (30s interval)
+- Connection timeout (5 minutes idle)
+- Session-based compilation tracking
+- Cancellation support
+
+<strong>Operation ID:</strong> `websocketCompile`
+
+<strong>Responses:</strong>
+
+- `101`: WebSocket connection established
+- `426`: Upgrade required (not a WebSocket request)
+
+---
+
+### Configuration
+
+#### `GET /configuration/defaults`
+
+<strong>Summary:</strong> Get system compilation defaults and limits
+
+Returns the system defaults and hard limits that apply to every compilation.
+No authentication required (anonymous tier).
+
+<strong>Operation ID:</strong> `getConfigurationDefaults`
+
+<strong>Responses:</strong>
+
+- `200`: Defaults and limits.
+- `429`: No description
+
+---
+
+#### `POST /configuration/validate`
+
+<strong>Summary:</strong> Validate a configuration object against the schema
+
+Validates a configuration object against the Zod `ConfigurationSchema`.
+Requires a Cloudflare Turnstile token when `TURNSTILE_SECRET_KEY` is configured.
+
+<strong>Operation ID:</strong> `validateConfiguration`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+<strong>Responses:</strong>
+
+- `200`: Validation result.
+- `400`: No description
+- `403`: Turnstile verification failed.
+- `429`: No description
+
+---
+
+#### `POST /configuration/resolve`
+
+<strong>Summary:</strong> Merge configuration layers and return effective IConfiguration
+
+Merges one or more configuration layers (base config + optional override) and
+returns the effective `IConfiguration`. Useful for previewing the result of a
+config + environment overlay before submitting a compile job.
+Requires a Cloudflare Turnstile token when `TURNSTILE_SECRET_KEY` is configured.
+
+<strong>Operation ID:</strong> `resolveConfiguration`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+<strong>Responses:</strong>
+
+- `200`: Resolved configuration.
+- `400`: No description
+- `403`: Turnstile verification failed.
+- `429`: No description
+
+---
+
+### Admin
+
+#### `GET /admin/storage/stats`
+
+<strong>Summary:</strong> Get storage statistics
+
+Returns database table counts and expired entry counts
+
+<strong>Operation ID:</strong> `getAdminStorageStats`
+
+<strong>Responses:</strong>
+
+- `200`: Storage statistics
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/storage/clear-expired`
+
+<strong>Summary:</strong> Clear expired entries
+
+Deletes all expired entries from storage tables
+
+<strong>Operation ID:</strong> `clearExpiredEntries`
+
+<strong>Responses:</strong>
+
+- `200`: Entries cleared
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/storage/clear-cache`
+
+<strong>Summary:</strong> Clear cache entries
+
+Deletes all cache entries from storage tables
+
+<strong>Operation ID:</strong> `clearCacheEntries`
+
+<strong>Responses:</strong>
+
+- `200`: Cache cleared
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `GET /admin/storage/export`
+
+<strong>Summary:</strong> Export storage data
+
+Exports storage entries as JSON (includes storage entries, filter cache, and compilation metadata; returned amounts subject to implementation limits)
+
+<strong>Operation ID:</strong> `exportStorage`
+
+<strong>Responses:</strong>
+
+- `200`: Storage export
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/storage/vacuum`
+
+<strong>Summary:</strong> Vacuum database
+
+Runs VACUUM on the D1 database to reclaim space
+
+<strong>Operation ID:</strong> `vacuumDatabase`
+
+<strong>Responses:</strong>
+
+- `200`: Vacuum completed
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `GET /admin/storage/tables`
+
+<strong>Summary:</strong> List database tables
+
+Returns all tables and indexes in the D1 database
+
+<strong>Operation ID:</strong> `listStorageTables`
+
+<strong>Responses:</strong>
+
+- `200`: Table listing
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/storage/query`
+
+<strong>Summary:</strong> Execute read-only SQL query
+
+Executes a SELECT-only SQL query against the D1 database for debugging
+
+<strong>Operation ID:</strong> `queryStorage`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`AdminQueryRequest`](#adminqueryrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Query results
+- `400`: Invalid or disallowed SQL
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/auth/users`
+
+<strong>Summary:</strong> Create user
+
+Creates a new user account. Requires Hyperdrive (PostgreSQL) binding.
+
+<strong>Operation ID:</strong> `createUser`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`CreateUserRequest`](#createuserrequest)
+
+<strong>Responses:</strong>
+
+- `201`: User created
+- `400`: No description
+- `401`: No description
+- `409`: User with this email already exists
+- `503`: No description
+
+---
+
+#### `GET /admin/auth/api-keys`
+
+<strong>Summary:</strong> List API keys
+
+Lists API keys for a user (without key hashes). Requires Hyperdrive (PostgreSQL) binding.
+
+<strong>Operation ID:</strong> `listApiKeys`
+
+<strong>Parameters:</strong>
+
+- `userId` (query) (required): User ID to list API keys for
+
+<strong>Responses:</strong>
+
+- `200`: List of API keys
+- `400`: No description
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/auth/api-keys`
+
+<strong>Summary:</strong> Create API key
+
+Creates a new API key for a user. Requires Hyperdrive (PostgreSQL) binding.
+
+<strong>Important:</strong> The raw API key is only returned once. Store it securely.
+
+<strong>Operation ID:</strong> `createApiKey`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`CreateApiKeyRequest`](#createapikeyrequest)
+
+<strong>Responses:</strong>
+
+- `201`: API key created
+- `400`: No description
+- `401`: No description
+- `404`: User not found
+- `503`: No description
+
+---
+
+#### `POST /admin/auth/api-keys/revoke`
+
+<strong>Summary:</strong> Revoke API key
+
+Revokes an API key by ID or key prefix. Requires Hyperdrive (PostgreSQL) binding.
+
+<strong>Operation ID:</strong> `revokeApiKey`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`RevokeApiKeyRequest`](#revokeapikeyrequest)
+
+<strong>Responses:</strong>
+
+- `200`: API key revoked
+- `400`: No description
+- `401`: No description
+- `404`: API key not found or already revoked
+- `503`: No description
+
+---
+
+#### `POST /admin/auth/api-keys/validate`
+
+<strong>Summary:</strong> Validate API key
+
+Validates an API key without authenticating a full request. Useful for the admin UI to test keys.
+
+<strong>Operation ID:</strong> `validateApiKey`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`ValidateApiKeyRequest`](#validateapikeyrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Validation result
+- `400`: No description
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/migrate/d1-to-pg`
+
+<strong>Summary:</strong> Migrate D1 data to PostgreSQL
+
+One-time migration that reads data from Cloudflare D1 (SQLite) and writes it to PostgreSQL via Hyperdrive.
+
+Migrates the following tables: `storage_entries`, `filter_cache`, `compilation_metadata`.
+
+The migration is:
+
+- **Idempotent**: uses ON CONFLICT DO NOTHING to skip existing rows
+- **Batched**: processes rows in chunks of 100
+- **Read-only on D1**: never modifies the source database
+- **Resumable**: can be re-run safely if interrupted
+
+<strong>Operation ID:</strong> `migrateD1ToPg`
+
+<strong>Parameters:</strong>
+
+- `dryRun` (query): Count rows without writing (dry run)
+- `tables` (query): Comma-separated list of tables to migrate (default: all)
+
+<strong>Responses:</strong>
+
+- `200`: Migration result
+- `400`: No description
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `GET /admin/backends`
+
+<strong>Summary:</strong> Backend health status
+
+Returns health and connectivity status of both D1 and PostgreSQL backends
+
+<strong>Operation ID:</strong> `getBackendStatus`
+
+<strong>Responses:</strong>
+
+- `200`: Backend status
+- `401`: No description
+
+---
+
+#### `GET /admin/pg/stats`
+
+<strong>Summary:</strong> PostgreSQL storage statistics
+
+Returns storage statistics from the PostgreSQL backend (mirrors /admin/storage/stats for D1)
+
+<strong>Operation ID:</strong> `getPgStorageStats`
+
+<strong>Responses:</strong>
+
+- `200`: PostgreSQL storage statistics
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `GET /admin/pg/export`
+
+<strong>Summary:</strong> Export PostgreSQL data
+
+Exports data from the PostgreSQL backend (mirrors /admin/storage/export for D1)
+
+<strong>Operation ID:</strong> `exportPgData`
+
+<strong>Responses:</strong>
+
+- `200`: PostgreSQL data export
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/pg/clear-expired`
+
+<strong>Summary:</strong> Clear expired PostgreSQL entries
+
+Deletes all expired entries from PostgreSQL storage and cache tables
+
+<strong>Operation ID:</strong> `clearPgExpiredEntries`
+
+<strong>Responses:</strong>
+
+- `200`: Entries cleared
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/pg/clear-cache`
+
+<strong>Summary:</strong> Clear PostgreSQL cache
+
+Deletes all cache entries from PostgreSQL tables
+
+<strong>Operation ID:</strong> `clearPgCache`
+
+<strong>Responses:</strong>
+
+- `200`: Cache cleared
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/pg/query`
+
+<strong>Summary:</strong> Execute read-only PostgreSQL query
+
+Executes a SELECT-only SQL query against PostgreSQL for debugging (mirrors /admin/storage/query for D1)
+
+<strong>Operation ID:</strong> `queryPg`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`AdminQueryRequest`](#adminqueryrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Query results
+- `400`: Invalid or disallowed SQL
+- `401`: No description
+- `503`: No description
+
+---
+
+#### `GET /admin/local-users`
+
+<strong>Summary:</strong> List local auth users
+
+Returns a paginated list of all local auth users.
+Responses never include `password_hash`.
+Requires Admin tier + admin role.
+
+<strong>Operation ID:</strong> `adminListLocalUsers`
+
+<strong>Parameters:</strong>
+
+- `limit` (query): Maximum number of users to return
+- `offset` (query): Number of users to skip (for pagination)
+
+<strong>Responses:</strong>
+
+- `200`: Paginated user list
+- `401`: No description
+- `403`: No description
+- `503`: No description
+
+---
+
+#### `POST /admin/local-users`
+
+<strong>Summary:</strong> Create a local auth user
+
+Create a new local auth user with any valid role and tier.
+Admins can create users with privileged roles (e.g. `admin`) that cannot be self-registered.
+Requires Admin tier + admin role.
+
+<strong>Operation ID:</strong> `adminCreateLocalUser`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`AdminCreateLocalUserRequest`](#admincreatelocaluserrequest)
+
+<strong>Responses:</strong>
+
+- `201`: User created
+- `400`: No description
+- `401`: No description
+- `403`: No description
+- `409`: An account with this identifier already exists
+- `503`: No description
+
+---
+
+#### `GET /admin/local-users/{userId}`
+
+<strong>Summary:</strong> Get a local auth user
+
+Returns the public profile of a single local auth user by UUID.
+Requires Admin tier + admin role.
+
+<strong>Operation ID:</strong> `adminGetLocalUser`
+
+<strong>Parameters:</strong>
+
+- `userId` (path) (required): Local auth user UUID
+
+<strong>Responses:</strong>
+
+- `200`: User profile
+- `401`: No description
+- `403`: No description
+- `404`: User not found
+- `503`: No description
+
+---
+
+#### `PATCH /admin/local-users/{userId}`
+
+<strong>Summary:</strong> Update a local auth user
+
+Update a user's `tier`, `role`, and/or `api_disabled` flag.
+Tier and role are independent fields — changing role does not automatically change tier unless
+no explicit tier is provided (in which case the role's default tier is applied).
+Requires Admin tier + admin role.
+
+<strong>Operation ID:</strong> `adminUpdateLocalUser`
+
+<strong>Parameters:</strong>
+
+- `userId` (path) (required): Local auth user UUID
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`AdminUpdateLocalUserRequest`](#adminupdatelocaluserrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Updated user profile
+- `400`: No description
+- `401`: No description
+- `403`: No description
+- `404`: User not found
+- `503`: No description
+
+---
+
+#### `DELETE /admin/local-users/{userId}`
+
+<strong>Summary:</strong> Delete a local auth user
+
+Permanently deletes a local auth user by UUID.
+Requires Admin tier + admin role.
+
+<strong>Operation ID:</strong> `adminDeleteLocalUser`
+
+<strong>Parameters:</strong>
+
+- `userId` (path) (required): Local auth user UUID
+
+<strong>Responses:</strong>
+
+- `200`: User deleted
+- `401`: No description
+- `403`: No description
+- `404`: User not found
+- `503`: No description
+
+---
+
+#### `GET /admin/auth/config`
+
+<strong>Summary:</strong> Inspect active auth registries
+
+Returns a read-only snapshot of all three extensibility registries at runtime:
+
+- `LOCAL_ROLE_REGISTRY` — all defined roles, their tiers, and self-register flag
+- `TIER_REGISTRY` — all tiers with rate limits and ordering
+- `ROUTE_PERMISSION_REGISTRY` — all registered route permission rules
+
+Also reports which auth provider is active (`local-jwt` vs `clerk`).
+Requires Admin tier + admin role.
+
+<strong>Operation ID:</strong> `adminAuthConfig`
+
+<strong>Responses:</strong>
+
+- `200`: Active auth configuration snapshot
+- `401`: No description
+- `403`: No description
+
+---
+
+#### `GET /admin/usage/{userId}`
+
+<strong>Summary:</strong> Get per-user API usage statistics
+
+Returns KV-backed API usage counters for a specific user:
+
+- `total` — lifetime request count, first/last seen timestamps
+- `days` — per-day breakdown for the requested lookback window (max 90 days)
+
+Requires Admin tier + admin role.
+
+<strong>Operation ID:</strong> `adminGetUserUsage`
+
+<strong>Parameters:</strong>
+
+- `userId` (path) (required): User ID (UUID or Clerk user ID)
+- `days` (query): Number of past days to include in the daily breakdown
+
+<strong>Responses:</strong>
+
+- `200`: Per-user usage statistics
+- `401`: No description
+- `403`: No description
+
+---
+
+### Workflow
+
+#### `POST /workflow/compile`
+
+<strong>Summary:</strong> Start async compilation workflow
+
+Creates a durable Cloudflare Workflow instance for compilation
+
+<strong>Operation ID:</strong> `startWorkflowCompile`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`CompileRequest`](#compilerequest)
+
+<strong>Responses:</strong>
+
+- `202`: Workflow started
+- `400`: No description
+- `503`: No description
+
+---
+
+#### `POST /workflow/batch`
+
+<strong>Summary:</strong> Start async batch compilation workflow
+
+Creates a durable Cloudflare Workflow instance for batch compilation
+
+<strong>Operation ID:</strong> `startWorkflowBatch`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`BatchCompileRequest`](#batchcompilerequest)
+
+<strong>Responses:</strong>
+
+- `202`: Workflow started
+- `400`: No description
+- `503`: No description
+
+---
+
+#### `POST /workflow/cache-warm`
+
+<strong>Summary:</strong> Start cache warming workflow
+
+Triggers manual cache warming for specified configurations
+
+<strong>Operation ID:</strong> `startWorkflowCacheWarm`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`CacheWarmRequest`](#cachewarmrequest)
+
+<strong>Responses:</strong>
+
+- `202`: Workflow started
+- `400`: No description
+- `503`: No description
+
+---
+
+#### `POST /workflow/health-check`
+
+<strong>Summary:</strong> Start health monitoring workflow
+
+Triggers manual health check for specified filter list sources
+
+<strong>Operation ID:</strong> `startWorkflowHealthCheck`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`HealthCheckRequest`](#healthcheckrequest)
+
+<strong>Responses:</strong>
+
+- `202`: Workflow started
+- `400`: No description
+- `503`: No description
+
+---
+
+#### `GET /workflow/status/{workflowType}/{instanceId}`
+
+<strong>Summary:</strong> Get workflow instance status
+
+Returns the current status and output of a workflow instance
+
+<strong>Operation ID:</strong> `getWorkflowStatus`
+
+<strong>Parameters:</strong>
+
+- `workflowType` (path) (required): Type of workflow
+- `instanceId` (path) (required): Workflow instance ID
+
+<strong>Responses:</strong>
+
+- `200`: Workflow status
+- `400`: Unknown workflow type
+- `404`: Workflow instance not found
+- `503`: No description
+
+---
+
+#### `GET /workflow/metrics`
+
+<strong>Summary:</strong> Get workflow metrics
+
+Returns aggregated metrics for all workflow types
+
+<strong>Operation ID:</strong> `getWorkflowMetrics`
+
+<strong>Responses:</strong>
+
+- `200`: Workflow metrics
+
+---
+
+#### `GET /workflow/events/{workflowId}`
+
+<strong>Summary:</strong> Get workflow events
+
+Returns progress events for a specific workflow instance
+
+<strong>Operation ID:</strong> `getWorkflowEvents`
+
+<strong>Parameters:</strong>
+
+- `workflowId` (path) (required): Workflow instance ID
+- `since` (query): Return only events after this timestamp
+
+<strong>Responses:</strong>
+
+- `200`: Workflow events
+
+---
+
+### Health
+
+#### `GET /health/latest`
+
+<strong>Summary:</strong> Get latest health check results
+
+Returns the results of the most recent health monitoring workflow run
+
+<strong>Operation ID:</strong> `getLatestHealth`
+
+<strong>Responses:</strong>
+
+- `200`: Latest health check data
+
+---
+
+#### `GET /health`
+
+<strong>Summary:</strong> Basic health check
+
+Returns current service health status and version
+
+<strong>Operation ID:</strong> `getHealth`
+
+<strong>Responses:</strong>
+
+- `200`: Service is healthy
+
+---
+
+### Authentication
+
+#### `GET /api/keys`
+
+<strong>Summary:</strong> List user's API keys
+
+Lists all API keys belonging to the authenticated user.
+Returns metadata only — never the key hash or plaintext.
+Requires Clerk JWT authentication.
+
+<strong>Operation ID:</strong> `userListApiKeys`
+
+<strong>Responses:</strong>
+
+- `200`: List of API keys
+- `401`: No description
+
+---
+
+#### `POST /api/keys`
+
+<strong>Summary:</strong> Create API key
+
+Creates a new API key for the authenticated user.
+The raw API key (with `abc_` prefix) is returned **only once** — store it securely.
+Requires Clerk JWT authentication.
+
+<strong>Operation ID:</strong> `userCreateApiKey`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`UserCreateApiKeyRequest`](#usercreateapikeyrequest)
+
+<strong>Responses:</strong>
+
+- `201`: API key created
+- `400`: No description
+- `401`: No description
+
+---
+
+#### `PATCH /api/keys/{keyId}`
+
+<strong>Summary:</strong> Update API key
+
+Updates an API key's name or scopes. Only the key owner can update their own keys.
+Requires Clerk JWT authentication.
+
+<strong>Operation ID:</strong> `userUpdateApiKey`
+
+<strong>Parameters:</strong>
+
+- `keyId` (path) (required): ID of the API key to update
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`UserUpdateApiKeyRequest`](#userupdateapikeyrequest)
+
+<strong>Responses:</strong>
+
+- `200`: API key updated
+- `400`: No description
+- `401`: No description
+- `404`: API key not found or already revoked
+
+---
+
+#### `DELETE /api/keys/{keyId}`
+
+<strong>Summary:</strong> Revoke API key
+
+Revokes (soft-deletes) an API key. The key remains in the database for audit
+purposes but is no longer valid for authentication.
+Only the key owner can revoke their own keys.
+
+<strong>Operation ID:</strong> `userRevokeApiKey`
+
+<strong>Parameters:</strong>
+
+- `keyId` (path) (required): ID of the API key to revoke
+
+<strong>Responses:</strong>
+
+- `200`: API key revoked
+- `401`: No description
+- `404`: API key not found or already revoked
+
+---
+
+#### `POST /api/webhooks/clerk`
+
+<strong>Summary:</strong> Clerk webhook receiver
+
+Receives Clerk webhook events (user.created, user.updated, user.deleted, session.created).
+Verified via Svix webhook signature. This endpoint is called by Clerk's webhook infrastructure
+and should not be called directly.
+
+<strong>Operation ID:</strong> `clerkWebhook`
+
+<strong>Parameters:</strong>
+
+- `svix-id` (header) (required): Svix webhook ID
+- `svix-timestamp` (header) (required): Svix webhook timestamp
+- `svix-signature` (header) (required): Svix webhook signature
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+<strong>Responses:</strong>
+
+- `200`: Webhook processed successfully
+- `400`: Invalid webhook signature or payload
+- `401`: Webhook signature verification failed
+
+---
+
+### Browser Run
+
+#### `POST /api/browser/resolve-url`
+
+<strong>Summary:</strong> Resolve canonical URL via browser
+
+Navigates to a URL using the Cloudflare Browser Run binding and returns the
+final canonical URL after all redirects. Useful for discovering the true destination
+of redirect chains or URL shorteners before scheduling a filter-list download.
+
+Requires the `BROWSER` binding to be configured in `wrangler.toml`.
+
+<strong>Operation ID:</strong> `browserResolveUrl`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`BrowserResolveRequest`](#browserresolverequest)
+
+<strong>Responses:</strong>
+
+- `200`: Resolved URL
+- `400`: Invalid request body
+- `502`: Browser navigation failed
+- `503`: BROWSER binding not configured
+
+---
+
+#### `POST /api/browser/monitor`
+
+<strong>Summary:</strong> Monitor filter-list sources for reachability
+
+Performs parallel browser-based health checks on a list of filter-list source
+URLs. For each URL a headless browser navigates to the page, verifies non-empty
+text content, and optionally captures a full-page PNG screenshot stored in R2.
+
+The full result set is persisted under the KV key `browser:monitor:latest`
+and is retrievable via `GET /api/browser/monitor/latest`.
+
+Requires the `BROWSER` binding. `FILTER_STORAGE` (R2) is required for
+screenshot capture. `COMPILATION_CACHE` (KV) is required for result persistence.
+
+<strong>Operation ID:</strong> `browserMonitor`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`SourceMonitorRequest`](#sourcemonitorrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Per-source reachability results
+- `400`: Invalid request body
+- `503`: BROWSER binding not configured
+
+---
+
+#### `GET /api/browser/monitor/latest`
+
+<strong>Summary:</strong> Retrieve the latest monitor results
+
+Returns the most recent result set written by `POST /api/browser/monitor`. Reads
+the KV key `browser:monitor:latest` from `COMPILATION_CACHE`.
+
+Requires the `COMPILATION_CACHE` binding.
+
+<strong>Operation ID:</strong> `browserMonitorLatest`
+
+<strong>Responses:</strong>
+
+- `200`: Latest monitor results
+- `404`: No monitor results available yet
+- `503`: COMPILATION\_CACHE binding not configured
+
+---
+
+### Rules
+
+#### `POST /validate-rule`
+
+<strong>Summary:</strong> Validate a single adblock rule
+
+Parses and validates a single adblock/DNS rule, returning its AST representation, type, and optional URL match result.
+
+<strong>Operation ID:</strong> `validateRule`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`ValidateRuleRequest`](#validaterulerequest)
+
+<strong>Responses:</strong>
+
+- `200`: Rule validation result
+- `400`: Invalid request body
+
+---
+
+### Rule Sets
+
+#### `GET /rules`
+
+<strong>Summary:</strong> List saved rule sets
+
+Returns all saved rule sets stored in the KV namespace.
+
+<strong>Operation ID:</strong> `listRuleSets`
+
+<strong>Responses:</strong>
+
+- `200`: List of rule sets
+- `500`: Internal server error
+
+---
+
+#### `POST /rules`
+
+<strong>Summary:</strong> Create a new rule set
+
+Creates and stores a new named rule set in the KV namespace.
+
+<strong>Operation ID:</strong> `createRuleSet`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`RuleSetCreateRequest`](#rulesetcreaterequest)
+
+<strong>Responses:</strong>
+
+- `201`: Rule set created
+- `400`: Invalid request body
+
+---
+
+#### `GET /rules/{id}`
+
+<strong>Summary:</strong> Get a rule set by ID
+
+<strong>Operation ID:</strong> `getRuleSet`
+
+<strong>Responses:</strong>
+
+- `200`: Rule set found
+- `404`: Rule set not found
+
+---
+
+#### `PUT /rules/{id}`
+
+<strong>Summary:</strong> Update a rule set by ID
+
+<strong>Operation ID:</strong> `updateRuleSet`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`RuleSetUpdateRequest`](#rulesetupdaterequest)
+
+<strong>Responses:</strong>
+
+- `200`: Rule set updated
+- `400`: Invalid request body
+- `404`: Rule set not found
+
+---
+
+#### `DELETE /rules/{id}`
+
+<strong>Summary:</strong> Delete a rule set by ID
+
+<strong>Operation ID:</strong> `deleteRuleSet`
+
+<strong>Responses:</strong>
+
+- `200`: Rule set deleted
+- `404`: Rule set not found
+
+---
+
+### Notifications
+
+#### `POST /notify`
+
+<strong>Summary:</strong> Send a notification event to configured webhook targets
+
+Delivers a notification event (e.g. error, warning, info) to one or more configured targets — generic HTTP webhook (WEBHOOK\_URL), Sentry (SENTRY\_DSN), and/or Datadog (DATADOG\_API\_KEY). At least one target must be configured in the worker environment.
+
+<strong>Operation ID:</strong> `notify`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`WebhookNotifyRequest`](#webhooknotifyrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Notification delivered to at least one target
+- `400`: Invalid request body
+- `502`: All configured notification targets failed to receive the event
+- `503`: No notification targets configured (set WEBHOOK\_URL, SENTRY\_DSN, or DATADOG\_API\_KEY)
+
+---
+
+### LocalAuth
+
+#### `POST /auth/signup`
+
+<strong>Summary:</strong> Register a new local account
+
+Create a new account using an email address or E.164 phone number and password.
+All self-registered users receive the `user` role (Free tier).
+Admin role must be granted via `POST /admin/local-users`.
+
+**Rate limited** (anonymous tier). Returns a signed HS256 JWT on success.
+
+> Only active when `CLERK_JWKS_URL` is not configured. When Clerk is live,
+> sign up via the Clerk-hosted UI instead.
+
+<strong>Operation ID:</strong> `localSignup`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`LocalSignupRequest`](#localsignuprequest)
+
+<strong>Responses:</strong>
+
+- `201`: Account created — JWT returned
+- `400`: No description
+- `409`: An account with this identifier already exists
+- `429`: No description
+- `503`: No description
+
+---
+
+#### `POST /auth/login`
+
+<strong>Summary:</strong> Authenticate and receive a JWT
+
+Authenticate with an identifier (email or phone) and password.
+Returns a signed HS256 JWT valid for 24 hours.
+
+Timing-safe: always runs full PBKDF2 derivation even for unknown identifiers
+to prevent user enumeration via timing side-channels.
+
+**Rate limited** (anonymous tier).
+
+<strong>Operation ID:</strong> `localLogin`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`LocalLoginRequest`](#localloginrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Authentication successful — JWT returned
+- `400`: No description
+- `401`: Invalid credentials (generic — no user enumeration)
+- `429`: No description
+- `503`: No description
+
+---
+
+#### `GET /auth/me`
+
+<strong>Summary:</strong> Get current user profile
+
+Returns the authenticated user's public profile.
+Requires a valid `Authorization: Bearer <jwt>` header.
+
+<strong>Operation ID:</strong> `localMe`
+
+<strong>Responses:</strong>
+
+- `200`: Current user profile
+- `401`: No description
+- `404`: User record not found (deleted since token was issued)
+- `503`: No description
+
+---
+
+#### `POST /auth/change-password`
+
+<strong>Summary:</strong> Change the current user's password
+
+Update the authenticated user's password.
+Requires a valid `Authorization: Bearer <jwt>` header and the correct current password.
+
+<strong>Operation ID:</strong> `localChangePassword`
+
+<strong>Request Body:</strong>
+
+- Content-Type: `application/json`
+
+  - Schema: [`LocalChangePasswordRequest`](#localchangepasswordrequest)
+
+<strong>Responses:</strong>
+
+- `200`: Password updated successfully
+- `400`: No description
+- `401`: Not authenticated or current password is wrong
+- `503`: No description
+
+---
+
+### Proxy
+
+#### `GET /api/proxy/fetch`
+
+<strong>Summary:</strong> Proxy fetch a single URL
+
+Fetches the content of a remote HTTPS URL on behalf of the client.
+
+This endpoint exists to allow browser-based (local mode) and hybrid mode compilation to download source filter lists that would otherwise be blocked by browser CORS policies.
+
+**SSRF protection** — private/loopback/link-local IP ranges and cloud metadata endpoints (`169.254.169.254`, `metadata.google.internal`) are blocked.
+
+**Caching** — responses are cached in KV for 5 minutes to reduce upstream load.
+
+**Auth** — anonymous callers must pass a valid Cloudflare Turnstile token via the `X-Turnstile-Token` request header or `turnstileToken` query parameter. Authenticated (Free+) callers are exempt.
+
+<strong>Query Parameters:</strong>
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `url` | `string` | ✅ | Fully-qualified HTTPS URL to fetch (URL-encoded) |
+| `turnstileToken` | `string` | — | Turnstile token for anonymous callers |
+
+<strong>Responses:</strong>
+
+- `200`: Raw text content of the proxied URL (`text/plain`)
+- `400`: Invalid or unsafe URL
+- `403`: Turnstile verification failed
+- `429`: Rate limit exceeded
+- `502`: Upstream fetch failed
+
+---
+
+#### `POST /api/proxy/fetch/batch`
+
+<strong>Summary:</strong> Batch proxy fetch multiple URLs
+
+Fetches the content of multiple remote HTTPS URLs in parallel.
+
+Used by **hybrid mode**: the Worker fetches source filter lists and returns the raw content to the browser, which then runs the transformation pipeline locally via `WorkerCompiler`.
+
+Requires **Pro tier**.
+
+Maximum **20 URLs** per request.
+
+**Request Body** (`application/json`):
+
+- `urls` (required): `string[]` — HTTPS URLs to fetch (min 1, max 20)
+
+**Response Body** (`application/json`):
+
+```json
+{
+  "success": true,
+  "results": {
+    "https://example.com/list.txt": {
+      "content": "! EasyList\n||example.com^"
+    },
+    "https://bad-url.example.com/": {
+      "error": "Fetch failed: upstream HTTP 404"
+    }
+  }
+}
+```
+
+<strong>Responses:</strong>
+
+- `200`: Map of URL → `{ content?: string; error?: string }`
+- `400`: Invalid request body or unsafe URL detected
+- `401`: Authentication required (Pro tier)
+
+---
+
+## Schemas
+
+### ErrorResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `error`: `string` -
+
+---
+
+### CompileRequest
+
+<strong>Properties:</strong>
+
+- `configuration` (required): `Configuration` -
+- `preFetchedContent`: `object` \- Map of source keys to pre-fetched content
+- `benchmark`: `boolean` \- Include detailed performance metrics
+- `turnstileToken`: `string` \- Cloudflare Turnstile token (if enabled)
+- `priority`: `string` \- Job processing priority (used for async compilation)
+
+---
+
+### Configuration
+
+<strong>Properties:</strong>
+
+- `name` (required): `string` \- Name of the compiled list
+- `description`: `string` \- Description of the list
+- `homepage`: `string` \- Homepage URL
+- `license`: `string` \- License identifier
+- `version`: `string` \- Version string
+- `sources` (required): `array` -
+- `transformations`: `array` \- Global transformations to apply
+- `exclusions`: `array` \- Rules to exclude (supports wildcards and regex)
+- `exclusions_sources`: `array` \- Files containing exclusion rules
+- `inclusions`: `array` \- Rules to include (supports wildcards and regex)
+- `inclusions_sources`: `array` \- Files containing inclusion rules
+
+---
+
+### Source
+
+<strong>Properties:</strong>
+
+- `source` (required): `string` \- URL or key for pre-fetched content
+- `name`: `string` \- Name of the source
+- `type`: `string` \- Source type
+- `transformations`: `array` -
+- `exclusions`: `array` -
+- `inclusions`: `array` -
+
+---
+
+### Transformation
+
+Available transformations (applied in this order):
+
+- **ConvertToAscii**: Convert internationalized domains to ASCII
+- **RemoveComments**: Remove comment lines
+- **Compress**: Convert hosts format to adblock syntax
+- **RemoveModifiers**: Strip unsupported modifiers
+- **Validate**: Remove invalid/dangerous rules
+- **ValidateAllowIp**: Like Validate but keeps IP addresses
+- **Deduplicate**: Remove duplicate rules
+- **InvertAllow**: Convert blocking rules to allowlist
+- **RemoveEmptyLines**: Remove blank lines
+- **TrimLines**: Remove leading/trailing whitespace
+- **InsertFinalNewLine**: Add final newline
+
+<strong>Enum values:</strong>
+
+- `ConvertToAscii`
+- `RemoveComments`
+- `Compress`
+- `RemoveModifiers`
+- `Validate`
+- `ValidateAllowIp`
+- `Deduplicate`
+- `InvertAllow`
+- `RemoveEmptyLines`
+- `TrimLines`
+- `InsertFinalNewLine`
+
+---
+
+### BatchCompileRequest
+
+<strong>Properties:</strong>
+
+- `requests` (required): `array` -
+
+---
+
+### BatchRequestItem
+
+<strong>Properties:</strong>
+
+- `id` (required): `string` \- Unique request identifier
+- `configuration` (required): `Configuration` -
+- `preFetchedContent`: `object` -
+- `benchmark`: `boolean` -
+
+---
+
+### CompileResponse
+
+<strong>Properties:</strong>
+
+- `success` (required): `boolean` -
+- `rules`: `array` \- Compiled filter rules
+- `ruleCount`: `integer` \- Number of rules
+- `metrics`: `CompilationMetrics` -
+- `compiledAt`: `string` -
+- `previousVersion`: `PreviousVersion` -
+- `cached`: `boolean` \- Whether result was served from cache
+- `deduplicated`: `boolean` \- Whether request was deduplicated
+- `error`: `string` \- Error message if success=false
+
+---
+
+### CompilationMetrics
+
+<strong>Properties:</strong>
+
+- `totalDurationMs`: `integer` -
+- `sourceCount`: `integer` -
+- `ruleCount`: `integer` -
+- `transformationMetrics`: `array` -
+
+---
+
+### PreviousVersion
+
+<strong>Properties:</strong>
+
+- `rules`: `array` -
+- `ruleCount`: `integer` -
+- `compiledAt`: `string` -
+
+---
+
+### BatchCompileResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `results`: `array` -
+
+---
+
+### QueueResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `message`: `string` -
+- `requestId`: `string` -
+- `priority`: `string` -
+- `note`: `string` \- Informational note about the queued job
+- `batchSize`: `integer` \- Number of items in the batch (only for batch async requests)
+
+---
+
+### QueueJobStatus
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `status`: `string` -
+- `jobInfo`: `object` -
+
+---
+
+### QueueStats
+
+<strong>Properties:</strong>
+
+- `pending`: `integer` -
+- `completed`: `integer` -
+- `failed`: `integer` -
+- `cancelled`: `integer` -
+- `totalProcessingTime`: `integer` -
+- `averageProcessingTime`: `integer` -
+- `processingRate`: `number` \- Jobs per minute
+- `queueLag`: `integer` \- Average time in queue (ms)
+- `lastUpdate`: `string` -
+- `history`: `array` -
+- `depthHistory`: `array` -
+
+---
+
+### JobHistoryEntry
+
+<strong>Properties:</strong>
+
+- `requestId`: `string` -
+- `configName`: `string` -
+- `status`: `string` -
+- `duration`: `integer` -
+- `timestamp`: `string` -
+- `error`: `string` -
+- `ruleCount`: `integer` -
+
+---
+
+### MetricsResponse
+
+<strong>Properties:</strong>
+
+- `window`: `string` -
+- `timestamp`: `string` -
+- `endpoints`: `object` -
+
+---
+
+### ApiInfo
+
+<strong>Properties:</strong>
+
+- `name`: `string` -
+- `version`: `string` -
+- `endpoints`: `object` -
+- `example`: `object` -
+
+---
+
+### VersionResponse
+
+<strong>Properties:</strong>
+
+- `success` (required): `boolean` -
+- `version` (required): `string` \- Semantic version string
+- `buildNumber`: `integer` -
+- `fullVersion`: `string` \- Full version string including build number
+- `gitCommit`: `string` -
+- `gitBranch`: `string` -
+- `deployedAt`: `string` \- Deployment timestamp as stored by SQLite datetime('now') in 'YYYY-MM-DD HH:MM:SS' format
+- `deployedBy`: `string` -
+- `status`: `string` -
+- `message`: `string` \- Present when no deployment history is available
+
+---
+
+### DeploymentHistoryResponse
+
+<strong>Properties:</strong>
+
+- `success` (required): `boolean` -
+- `deployments` (required): `array` -
+- `count` (required): `integer` \- Total number of deployments returned
+
+---
+
+### DeploymentStatsResponse
+
+<strong>Properties:</strong>
+
+- `success` (required): `boolean` -
+- `totalDeployments` (required): `integer` -
+- `successfulDeployments` (required): `integer` -
+- `failedDeployments` (required): `integer` -
+- `latestVersion`: `string` -
+
+---
+
+### TurnstileConfigResponse
+
+<strong>Properties:</strong>
+
+- `siteKey`: `string` \- Cloudflare Turnstile site key
+- `enabled`: `boolean` \- Whether Turnstile verification is enabled
+
+---
+
+### DeploymentInfo
+
+<strong>Properties:</strong>
+
+- `version` (required): `string` -
+- `buildNumber` (required): `integer` -
+- `fullVersion` (required): `string` -
+- `gitCommit` (required): `string` -
+- `gitBranch` (required): `string` -
+- `deployedAt` (required): `string` \- Deployment timestamp as stored by SQLite datetime('now') in 'YYYY-MM-DD HH:MM:SS' format
+- `deployedBy` (required): `string` -
+- `status` (required): `string` -
+- `metadata`: `object` -
+
+---
+
+### QueueHistoryResponse
+
+<strong>Properties:</strong>
+
+- `history`: `array` -
+- `depthHistory`: `array` -
+
+---
+
+### CancelJobResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `message`: `string` -
+- `note`: `string` \- Note that job may still process if already started
+
+---
+
+### ASTParseRequest
+
+Either 'rules' or 'text' must be provided
+
+<strong>Properties:</strong>
+
+- `rules`: `array` \- Array of filter rule strings to parse
+- `text`: `string` \- Raw text containing filter rules (newline-separated)
+
+---
+
+### ASTParseResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `parsedRules`: `array` \- Array of parsed rule AST objects
+- `summary`: `object` \- Summary statistics about the parsed rules (e.g., total rules, rule types, parse errors)
+
+---
+
+### AdminStorageStatsResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `stats`: `StorageStats` -
+- `timestamp`: `string` -
+
+---
+
+### StorageStats
+
+<strong>Properties:</strong>
+
+- `storage_entries`: `integer` -
+- `filter_cache`: `integer` -
+- `compilation_metadata`: `integer` -
+- `expired_storage`: `integer` -
+- `expired_cache`: `integer` -
+
+---
+
+### AdminOperationResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `deleted`: `integer` \- Number of entries deleted (for clear operations)
+- `message`: `string` -
+
+---
+
+### AdminExportResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `exportedAt`: `string` -
+- `storage_entries`: `array` -
+- `filter_cache`: `array` -
+- `compilation_metadata`: `array` -
+
+---
+
+### AdminTablesResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `tables`: `array` -
+
+---
+
+### TableInfo
+
+<strong>Properties:</strong>
+
+- `name`: `string` -
+- `type`: `string` -
+
+---
+
+### AdminQueryRequest
+
+<strong>Properties:</strong>
+
+- `sql` (required): `string` \- SELECT-only SQL query to execute
+
+---
+
+### AdminQueryResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `rows`: `array` -
+- `rowCount`: `integer` -
+- `meta`: `object` \- Query metadata (e.g., column names, types, execution time)
+
+---
+
+### WorkflowStartResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `message`: `string` -
+- `workflowId`: `string` -
+- `workflowType`: `string` -
+- `batchSize`: `integer` \- Number of items in the batch (batch workflows only)
+- `configurationsCount`: `string` \- Number of configurations to warm, or 'default' for all default configurations (cache-warming only)
+- `sourcesCount`: `string` \- Number of sources to check, or 'default' for all default sources (health-monitoring only)
+
+---
+
+### CacheWarmRequest
+
+<strong>Properties:</strong>
+
+- `configurations`: `array` \- Configurations to warm (uses defaults if empty)
+
+---
+
+### HealthCheckRequest
+
+<strong>Properties:</strong>
+
+- `sources`: `array` \- Sources to health-check (uses defaults if empty)
+- `alertOnFailure`: `boolean` -
+
+---
+
+### WorkflowStatusResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `workflowId`: `string` -
+- `workflowType`: `string` -
+- `status`: `string` -
+- `output`: `object` -
+- `error`: `string` -
+
+---
+
+### WorkflowMetricsResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `timestamp`: `string` -
+- `workflows`: `object` \- Metrics grouped by workflow type
+
+---
+
+### WorkflowEventsResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `workflowId`: `string` -
+- `workflowType`: `string` -
+- `startedAt`: `string` -
+- `completedAt`: `string` -
+- `progress`: `number` -
+- `isComplete`: `boolean` -
+- `events`: `array` -
+
+---
+
+### WorkflowEvent
+
+<strong>Properties:</strong>
+
+- `type`: `string` -
+- `workflowId`: `string` -
+- `workflowType`: `string` -
+- `timestamp`: `string` -
+- `step`: `string` -
+- `progress`: `number` -
+- `message`: `string` -
+- `data`: `object` \- Step-specific data (structure varies by workflow type and step)
+
+---
+
+### HealthLatestResponse
+
+<strong>Properties:</strong>
+
+- `success` (required): `boolean` -
+- `message`: `string` \- Present when no health data is available
+- `timestamp`: `string` \- ISO timestamp of when this health check ran
+- `runId`: `string` \- Unique identifier for the health monitoring workflow run
+- `results`: `array` \- Per-source health check results
+- `summary`: `object` \- Aggregate counts for the health check run
+
+---
+
+### SourceHealthResult
+
+<strong>Properties:</strong>
+
+- `name` (required): `string` -
+- `url` (required): `string` -
+- `healthy` (required): `boolean` -
+- `statusCode`: `integer` -
+- `responseTimeMs`: `number` -
+- `ruleCount`: `integer` -
+- `error`: `string` -
+- `lastChecked` (required): `string` -
+
+---
+
+### HealthResponse
+
+<strong>Properties:</strong>
+
+- `status`: `string` -
+- `version`: `string` \- Current service version
+
+---
+
+### CreateUserRequest
+
+<strong>Properties:</strong>
+
+- `email` (required): `string` \- User email address
+- `displayName`: `string` \- Display name
+- `role`: `string` \- User role
+
+---
+
+### CreateUserResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### CreateApiKeyRequest
+
+<strong>Properties:</strong>
+
+- `userId` (required): `string` \- ID of the user to create the key for
+- `name` (required): `string` \- Descriptive name for the API key
+- `scopes`: `array` \- Permission scopes for the key
+- `rateLimitPerMinute`: `integer` \- Rate limit override for this key
+- `expiresAt`: `string` \- Expiry date for the key
+
+---
+
+### CreateApiKeyResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### ListApiKeysResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### ApiKeyInfo
+
+<strong>Properties:</strong>
+
+- `id`: `string` -
+- `name`: `string` -
+- `keyPrefix`: `string` -
+- `scopes`: `array` -
+- `rateLimitPerMinute`: `integer` -
+- `createdAt`: `string` -
+- `expiresAt`: `string` -
+- `revokedAt`: `string` -
+- `lastUsedAt`: `string` -
+- `status`: `string` -
+
+---
+
+### RevokeApiKeyRequest
+
+<strong>Properties:</strong>
+
+- `apiKeyId`: `string` \- ID of the API key to revoke
+- `keyPrefix`: `string` \- Prefix of the API key to revoke
+
+---
+
+### RevokeApiKeyResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### ValidateApiKeyRequest
+
+<strong>Properties:</strong>
+
+- `apiKey` (required): `string` \- The API key to validate
+
+---
+
+### ValidateApiKeyResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### UserCreateApiKeyRequest
+
+<strong>Properties:</strong>
+
+- `name` (required): `string` \- Human-readable name for the key
+- `scopes`: `array` \- Permissions granted to this key (defaults to ["compile"])
+- `expiresInDays`: `integer` \- Days until expiration (omit for no expiry)
+
+---
+
+### UserCreateApiKeyResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `id`: `string` -
+- `key`: `string` \- The plaintext API key (returned **only once** on creation). Starts with `abc_`.
+- `keyPrefix`: `string` \- First 8 characters of the key (e.g. abc\_XXXX)
+- `name`: `string` -
+- `scopes`: `array` -
+- `rateLimitPerMinute`: `integer` -
+- `expiresAt`: `string` -
+- `createdAt`: `string` -
+
+---
+
+### UserApiKeyInfo
+
+<strong>Properties:</strong>
+
+- `id`: `string` -
+- `keyPrefix`: `string` -
+- `name`: `string` -
+- `scopes`: `array` -
+- `rateLimitPerMinute`: `integer` -
+- `lastUsedAt`: `string` -
+- `expiresAt`: `string` -
+- `revokedAt`: `string` -
+- `createdAt`: `string` -
+- `updatedAt`: `string` -
+- `isActive`: `boolean` \- Whether the key is currently usable (not revoked and not expired)
+
+---
+
+### UserListApiKeysResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `keys`: `array` -
+- `total`: `integer` -
+
+---
+
+### UserUpdateApiKeyRequest
+
+At least one of `name` or `scopes` must be provided.
+
+<strong>Properties:</strong>
+
+- `name`: `string` \- New name for the key
+- `scopes`: `array` \- New scopes for the key
+
+---
+
+### UserUpdateApiKeyResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `id`: `string` -
+- `keyPrefix`: `string` -
+- `name`: `string` -
+- `scopes`: `array` -
+- `rateLimitPerMinute`: `integer` -
+- `lastUsedAt`: `string` -
+- `expiresAt`: `string` -
+- `createdAt`: `string` -
+- `updatedAt`: `string` -
+
+---
+
+### MigrationResult
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### MigrationTableStats
+
+<strong>Properties:</strong>
+
+- `table`: `string` -
+- `sourceCount`: `integer` -
+- `migratedCount`: `integer` -
+- `skippedCount`: `integer` -
+- `errorCount`: `integer` -
+- `durationMs`: `integer` -
+
+---
+
+### BackendStatusResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### BackendHealth
+
+<strong>Properties:</strong>
+
+- `available`: `boolean` -
+- `latencyMs`: `integer` -
+- `host`: `string` \- Host name (PostgreSQL only)
+- `error`: `string` \- Error message if unavailable
+
+---
+
+### PgStorageStatsResponse
+
+<strong>Properties:</strong>
+
+- `success`: `boolean` -
+- `data`: `object` -
+
+---
+
+### WsCompileRequest
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `sessionId` (required): `string` -
+- `configuration` (required): `Configuration` -
+- `preFetchedContent`: `object` -
+- `benchmark`: `boolean` -
+
+---
+
+### WsCancelRequest
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `sessionId` (required): `string` -
+
+---
+
+### WsPingMessage
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+
+---
+
+### WsWelcomeMessage
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `version` (required): `string` -
+- `connectionId` (required): `string` -
+- `capabilities` (required): `object` -
+
+---
+
+### WsPongMessage
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `timestamp`: `string` -
+
+---
+
+### WsCompileStartedMessage
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `sessionId` (required): `string` -
+- `configurationName` (required): `string` -
+
+---
+
+### WsEventMessage
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `sessionId` (required): `string` -
+- `eventType` (required): `string` -
+- `data` (required): `object` -
+
+---
+
+### WsCompileCompleteMessage
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `sessionId` (required): `string` -
+- `rules` (required): `array` -
+- `ruleCount` (required): `integer` -
+- `metrics`: `object` -
+- `compiledAt`: `string` -
+
+---
+
+### WsCompileErrorMessage
+
+<strong>Properties:</strong>
+
+- `type` (required): `string` -
+- `sessionId` (required): `string` -
+- `error` (required): `string` -
+- `details`: `object` -
+
+---
+
+### BrowserWaitUntil
+
+Playwright `waitUntil` navigation event. `networkidle` (default) waits until
+there are no more than 0 network connections for at least 500 ms — suitable for
+most filter-list sources. Use `load` for fastest navigation.
+
+<strong>Enum values:</strong>
+
+- `load`
+- `domcontentloaded`
+- `networkidle`
+
+---
+
+### BrowserResolveRequest
+
+<strong>Properties:</strong>
+
+- `url` (required): `string` \- The URL to navigate to and resolve.
+- `waitUntil`: `BrowserWaitUntil` -
+
+---
+
+### BrowserResolveResponse
+
+<strong>Properties:</strong>
+
+- `success` (required): `boolean` -
+- `resolvedUrl` (required): `string` \- The canonical URL after all JavaScript redirects have settled.
+- `originalUrl` (required): `string` \- The original URL that was submitted.
+
+---
+
+### SourceMonitorEntry
+
+<strong>Properties:</strong>
+
+- `url` (required): `string` \- The source URL that was checked.
+- `reachable` (required): `boolean` \- Whether the URL was reachable and returned non-empty content.
+- `checkedAt` (required): `string` \- ISO-8601 timestamp of when this URL was checked.
+- `screenshotKey`: `string` \- R2 object key for the captured screenshot (only present when captureScreenshots is true).
+- `error`: `string` \- Error message, present only when the URL could not be fetched.
+
+---
+
+### SourceMonitorRequest
+
+<strong>Properties:</strong>
+
+- `urls` (required): `array` \- One or more filter-list source URLs to check (max 10).
+- `captureScreenshots`: `boolean` \- When true, a full-page PNG screenshot is captured and stored in R2 per URL.
+- `screenshotPrefix`: `string` \- R2 key prefix for screenshots (alphanumeric, hyphens, underscores only). Defaults to the current ISO date.
+- `timeout`: `integer` \- Per-URL navigation timeout in milliseconds.
+- `waitUntil`: `BrowserWaitUntil` -
+
+---
+
+### SourceMonitorResponse
+
+<strong>Properties:</strong>
+
+- `success` (required): `boolean` -
+- `results` (required): `array` -
+- `total` (required): `integer` \- Total number of URLs checked.
+- `reachable` (required): `integer` \- Number of reachable URLs.
+- `unreachable` (required): `integer` \- Number of unreachable URLs.
+
+---

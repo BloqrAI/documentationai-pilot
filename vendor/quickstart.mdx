@@ -1,0 +1,54 @@
+---
+title: Vendor Quickstart
+description: Integrate Bloqr-compiled lists into your product quickly.
+---
+
+This guide is for technical vendors integrating Bloqr-compiled lists into their products.
+
+1. Get an API key from [app.bloqr.dev](https://app.bloqr.dev).
+2. Make your first compile request.
+3. Point your product at the compiled list URL or integrate the streaming endpoint.
+
+## First request examples
+
+```bash
+curl -X POST 'https://api.bloqr.dev/api/v1/compile' \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "urls": ["https://easylist.to/easylist/easylist.txt"],
+    "transformations": ["RemoveComments", "Deduplicate"]
+  }'
+```
+
+```js
+const response = await fetch('https://api.bloqr.dev/api/v1/compile', {
+    method: 'POST',
+    headers: {
+        'Authorization': `Bearer ${process.env.BLOQR_API_KEY}`,
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        urls: ['https://easylist.to/easylist/easylist.txt'],
+        transformations: ['RemoveComments', 'Deduplicate'],
+    }),
+});
+
+const payload = await response.json();
+console.log(payload);
+```
+
+## Key endpoint map
+
+| Endpoint | Description |
+| --- | --- |
+| `POST /api/v1/compile` | Compile a single configuration and return compiled output metadata. |
+| `POST /api/v1/compile/batch` | Compile multiple configurations in one request for bulk workflows. |
+| `GET /api/v1/compile/stream` | Subscribe to live compile progress and result events. |
+| `POST /api/v1/validate` | Validate requests before running production compiles. |
+
+## Continue reading
+
+- [API Overview](/api/readme)
+- [Streaming API](/api/streaming-api)
+- [API Authentication](https://docs.bloqr.dev/auth/api-authentication/)

@@ -1,0 +1,58 @@
+---
+title: Neon wake budget
+description: "Goal: with very few customers, keep the production Neon compute suspended except when there is real work. Every connection wakes it, and the endpoint now..."
+---
+
+# Neon wake budget
+
+Goal: with very few customers, keep the production Neon compute suspended except when there is real work. Every connection wakes it,
+and the endpoint now suspends 2 minutes after the last activity (it was 10).
+
+## Measured effect (2026-10-12 to 2026-10-13)
+
+|  | Active share of wall clock | Source |
+| --- | --- | --- |
+| Before (first 27.6 h of the project) | about 90% (89,420 active seconds) | Neon branch `active_time_seconds` |
+| After the changes, clean window 00:00-06:08 UTC | about 7% (9 wakes, 2.4-6 min each) | Neon operations log |
+
+The "after" figure excludes the evening of 2026-10-12, when each alert-rule re-apply woke the compute.
+
+## What wakes it now (attributed from Neon's Postgres logs in Loki, `connection authorized` lines)
+
+| Caller | Pattern | Verdict |
+| --- | --- | --- |
+| `compiler_app` (Worker via Hyperdrive) | 00:00 and 06:00 UTC | Expected: the 6-hourly cron runs the deep health check and source ingestion together |
+| `grafana_ro` | about every 6 h at `:13`, plus a few extra bursts | The 6-hourly drift and source-ingest alert rules. Extra bursts are dashboards being viewed |
+| `neondb_owner` | irregular | Console, migrations and operator queries |
+| `compiler_app` burst of 110 connections at 05:46 UTC (2026-10-13) | once | <strong>Unattributed.</strong> `bloqr-linear-sync` has no database binding, and `bloqr-backend` traffic was normal (11-28 invocations per 5 minutes). Investigate if it recurs |
+
+Hourly wakes at `:13` (Grafana) and `:15` (ingestion) stopped after the 6-hour changes.
+
+## Code-path audit (worker/, read-only; admin routes, tRPC and storage were grepped, not fully read)
+
+Anonymous traffic does not reach Neon: quota checks return early without a user id, user access checks run only for Better Auth sessions, rate limiting uses a
+Durable Object with KV fallback, and the cron, queue and workflow handlers do not query Postgres (apart from source ingestion). The per-request Prisma client is lazy.
+
+| Rank | Path | When it runs | Recommendation |
+| --- | --- | --- | --- |
+| 1 | `handlers/health.ts` DB probe (cached 120 s per isolate) | Any call to `/api/health` | Monitors already use `/api/health/latest` (KV). Keep the deep probe to the 6-hourly cron and `/health/db-smoke` |
+| 2 | `utils/user-access.ts:41` ban check | Every Better Auth request | Cache `banned:<userId>` in KV with write-through on ban and unban (`handlers/admin-users.ts`) |
+| 3 | `middleware/auth.ts:122,146,368` API-key lookup, `lastUsedAt` write, tier lookup | Every API-key request: 2 reads and 1 write | Cache the key resolution in KV for 5-10 minutes, invalidate on revoke, debounce `lastUsedAt` to once an hour |
+| 4 | Better Auth session lookup (`lib/auth.ts`) | Session requests that miss the 5-minute cookie cache | Sessions must stay in Postgres (documented sign-in breakage with `storeSessionInDatabase:false` on 1.6.x). Lengthen `cookieCache.maxAge` only after a security review |
+| 5 | `services/quota-enforcement-service.ts:43,99` plus plan-limit reads | Every authenticated compile: 1 count, 1 insert, 1-2 reads | Daily counter in `USAGE_LEDGER` KV or a Durable Object, event log to Analytics Engine, plan limits in `CONFIG_STORE` KV |
+| 6-12 | PAYG billing, saved configs, API-key CRUD, auth flows, Stripe sync, admin, source ingestion | User or operator driven, or scheduled | Keep on Neon. Correctness matters more than wake count |
+
+Relevant bindings already in `wrangler.toml`: KV (`RATE_LIMIT`, `USAGE_LEDGER`, `CONFIG_STORE`, `BETTER_AUTH_KV`, `RULES_KV`, `METRICS`), D1 (`DB`, `ADMIN_DB`),
+Analytics Engine (`ANALYTICS_ENGINE`), Durable Objects (`COMPILATION_COORDINATOR`, `RATE_LIMITER_DO`).
+
+## Backlog and triggers
+
+Rows 2, 3 and 5 are deliberately **not** changed yet. They touch authorization and billing, and today almost no authenticated traffic reaches them, so the saving is
+negligible while the correctness risk is real. Do them when authenticated traffic is steady enough that these paths keep the compute awake (watch the `compiler_app`
+connection count per day in Loki), starting with the ban cache and the `lastUsedAt` debounce.
+
+## How to re-measure
+
+- Neon operations log: count `start_compute` per day for `ep-summer-pine-b73vvmyj`.
+- Loki: `{service_name="neon-postgres-production"} |= "connection authorized"` grouped by `user`.
+- Branch `active_time_seconds` over a fixed window.

@@ -1,0 +1,362 @@
+---
+title: Cloudflare Workers Architecture
+description: This document describes the two Cloudflare Workers deployments that make up the Bloqr Compiler service, the differences between them, and how they relate to...
+---
+
+# Cloudflare Workers Architecture
+
+This document describes the two Cloudflare Workers deployments that make up the Bloqr Compiler service, the differences between them, and how they relate to each other.
+
+---
+
+## Overview
+
+The Bloqr Compiler is deployed as **two separate Cloudflare Workers** from a single GitHub repository. Each has a distinct role:
+
+|  | `bloqr-backend` | `bloqr-frontend` |
+| --- | --- | --- |
+| **Wrangler config** | [`wrangler.toml`](https://github.com/bloqr-systems/bloqr-compiler/blob/main/wrangler.toml) | [`frontend/wrangler.toml`](https://github.com/bloqr-systems/bloqr-compiler/blob/main/frontend/wrangler.toml) |
+| **Entry point** | `worker/worker.ts` | `dist/bloqr-frontend/server/server.mjs` |
+| **Role** | REST API + compilation engine; also serves the Angular SPA as bundled static assets (CSR only) | Angular 22 SSR UI — **canonical home URL for the app** |
+| **Source path** | `worker/` \+ `src/` | `frontend/` |
+| **Deploy command** | `deno task wrangler:deploy` | `sh scripts/deploy-frontend.sh` (repo root) |
+| **CI deploy trigger** | `deploy` job in `ci.yml` (main push, when `worker/**` or `src/**` changed) | `deploy-frontend` job in `ci.yml` (main push when `frontend/**`, `worker/**`, `src/**`, `wrangler.toml`, `src/version.ts`, or compiler config changes such as `deno.json` / `deno.lock` changed; or `workflow_dispatch` with `force_deploy_frontend: true`) |
+| **Release deploy trigger** | `build-binaries` job in `release.yml` | `deploy-frontend` job in `release.yml` (tag push) |
+| **Local dev port** | `8787` | `8787` (via `pnpm --filter bloqr-frontend run preview`) |
+
+---
+
+## `bloqr-backend` — The API Worker
+
+### What It Does
+
+The backend worker is the **compilation engine**. It:
+
+- Exposes a REST API (`POST /compile`, `POST /compile/stream`, `POST /compile/batch`, `GET /metrics`, etc.)
+- Runs adblock/hostlist filter list compilation using the core `src/` TypeScript logic (forked from [AdguardTeam/HostlistCompiler](https://github.com/AdguardTeam/HostlistCompiler))
+- Handles async queue-based compilation via Cloudflare Queues
+- Manages caching, rate limiting, and metrics via KV namespaces
+- Stores compiled outputs in R2 and persists state in D1 + Durable Objects
+- Runs scheduled background jobs (cache warming, health monitoring) via Cloudflare Workflows + Cron Triggers
+- Also serves the compiled Angular frontend as static assets via its `[assets]` binding (bundled deployment mode)
+
+### Source
+
+```mermaid
+mindmap
+  root((bloqr-backend))
+    worker["worker/"]
+      workerTs["worker.ts — Cloudflare Workers fetch handler"]
+    src["src/ — core compilation logic"]
+    wrangler["wrangler.toml — deployment configuration (name = bloqr-backend)"]
+```
+
+### Key Bindings
+
+| Binding | Type | Purpose |
+| --- | --- | --- |
+| `COMPILATION_CACHE` | KV | Cache compiled filter lists |
+| `RATE_LIMIT` | KV | Per-IP rate limiting |
+| `METRICS` | KV | Metrics counters |
+| `FILTER_STORAGE` | R2 | Store compiled filter list outputs |
+| `DB` | D1 | SQLite edge database |
+| `BLOQR_COMPILER_DO` | Durable Object | Stateful compilation sessions |
+| `HYPERDRIVE` | Hyperdrive | Accelerated PostgreSQL access |
+| `ANALYTICS_ENGINE` | Analytics Engine | High-cardinality telemetry |
+| `ASSETS` | Static Assets | Serves compiled Angular frontend as static assets (bundled/single-worker mode only) |
+
+---
+
+## `bloqr-frontend` — The UI Worker
+
+### What It Does
+
+The frontend worker is the **Angular 22 SSR application**. It:
+
+- Server-side renders the Angular application at the Cloudflare edge using `AngularAppEngine`
+- Serves the home page as a prerendered static page (SSG); all other routes are SSR per-request
+- Serves JS/CSS/font bundles directly from Cloudflare's CDN via the `ASSETS` binding (the Worker never handles these requests)
+- Calls the `bloqr-backend` backend Worker's REST API for all compilation operations
+
+### Source
+
+```mermaid
+mindmap
+  root((bloqr-frontend))
+    frontend["frontend/"]
+      src["src/ — Angular 22 application source"]
+      server["server.ts — Cloudflare Workers fetch handler (AngularAppEngine)"]
+      wrangler["wrangler.toml — deployment configuration (name = bloqr-frontend)"]
+```
+
+### Key Bindings
+
+| Binding | Type | Purpose |
+| --- | --- | --- |
+| `ASSETS` | Static Assets | JS bundles, CSS, fonts — served from CDN before the Worker is invoked |
+| `API` | Service Binding | Active — forwards all `/api/*` requests (browser-originated and SSR-initiated) from `bloqr-frontend` to `bloqr-backend` via the internal Cloudflare network. The browser→frontend leg is a normal public request; the frontend→backend leg bypasses the public network and CORS entirely. Sets `CF-Worker-Source: ssr` on every forwarded request. |
+
+### SSR Architecture
+
+The `server.ts` fetch handler uses Angular 22's `AngularAppEngine` with the standard [WinterCG](https://wintercg.org/) fetch API — no Express, no Node.js HTTP server:
+
+```typescript
+// Angular 22: setAngularAppEngineManifest() must be called before constructing
+// AngularAppEngine.  The manifest is a build artifact loaded at runtime via a
+// dynamic import so esbuild does not attempt to bundle it.
+import { AngularAppEngine, ɵsetAngularAppEngineManifest as setAngularAppEngineManifest } from '@angular/ssr';
+
+// Cached at module scope — setup runs once per isolate, not once per request.
+let angularAppPromise: Promise<AngularAppEngine> | null = null;
+
+function getAngularApp(): Promise<AngularAppEngine> {
+    if (!angularAppPromise) {
+        angularAppPromise = (async () => {
+            const manifestPath = './angular-app-engine-manifest.mjs'; // variable path → not bundled
+            const { default: manifest } = await import(manifestPath);
+            setAngularAppEngineManifest(manifest);
+            return new AngularAppEngine();
+        })();
+    }
+    return angularAppPromise;
+}
+
+const handler = {
+    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+        // Forward ALL /api/* requests to the backend via the service binding.
+        // Browser requests arrive at this worker over the public network; the
+        // hop from here to the backend is internal (no public round-trip, no CORS).
+        if (new URL(request.url).pathname.startsWith('/api/')) {
+            try {
+                const internalReq = new Request(request, {
+                    headers: { ...Object.fromEntries(request.headers), 'CF-Worker-Source': 'ssr' },
+                });
+                return await env.API.fetch(internalReq);
+            } catch (err) {
+                return new Response('API unavailable', { status: 502 });
+            }
+        }
+        // Delegate remaining requests to AngularAppEngine for SSR.
+        const response = await (await getAngularApp()).handle(request);
+        return response ?? new Response('Not found', { status: 404 });
+    },
+};
+
+export default handler;
+```
+
+This means:
+
+- **Edge-compatible** — runs in any WinterCG-compliant runtime (Cloudflare Workers, Deno Deploy, Fastly Compute)
+- **Fast cold starts** — no Express middleware chain, no Node.js HTTP server initialisation
+- **Zero-overhead static assets** — JS/CSS/fonts are served by Cloudflare CDN before the Worker is ever invoked
+
+---
+
+## Relationship Between the Two Workers
+
+```mermaid
+flowchart TD
+    BROWSER["Browser Request"]
+
+    FRONTEND["bloqr-frontend\n(Angular 22 SSR Worker)\n\n• Prerendered home page (SSG)\n• SSR for /compiler, /performance, /admin, /api-docs, /validation\n• Static assets served from CDN via ASSETS binding\n• All /api/* requests forwarded to bloqr-backend via service binding"]
+
+    BROWSER -->|"Public network"| FRONTEND
+
+    subgraph INTERNAL["Cloudflare Internal Network (service binding)"]
+        direction TB
+        BACKEND["bloqr-backend\n(TypeScript REST API Worker)\n\n• POST /compile\n• POST /compile/stream (SSE)\n• POST /compile/batch\n• GET /metrics  •  GET /health\n• KV, R2, D1, Durable Objects, Queues, Workflows, Hyperdrive"]
+    end
+
+    FRONTEND -->|"All /api/* calls via env.API.fetch()\n— no public hop, no CORS"| BACKEND
+```
+
+### Two Deployment Modes
+
+The backend worker supports **two ways** the frontend can be served:
+
+#### 1\. Bundled Mode (single worker)
+
+The root `wrangler.toml` includes an `[assets]` block pointing to the Angular build output:
+
+```toml
+[assets]
+directory = "./frontend/dist/bloqr-frontend/browser"
+binding = "ASSETS"
+```
+
+This means a single `wrangler deploy` from the repo root deploys **both** the API and the Angular frontend as one unit. The Worker serves API requests; static assets are served by Cloudflare CDN via the binding.
+
+#### 2\. Independent SSR Mode (two separate workers)
+
+`frontend/wrangler.toml` deploys the Angular application as its **own Worker** with full SSR (`AngularAppEngine`). This is the `bloqr-frontend` worker. It runs server-side rendering at the edge and calls the backend API for data.
+
+|  | Bundled Mode | Independent SSR Mode |
+| --- | --- | --- |
+| **Workers deployed** | 1 (`bloqr-backend`) | 2 (backend + frontend) |
+| **Frontend serving** | Static assets via CDN binding | `AngularAppEngine` SSR + CDN for assets |
+| **SSR support** | No (SPA only) | Yes (prerender + server rendering) |
+| **Deploy command** | `deno task wrangler:deploy` (root) | `deno task wrangler:deploy` (root) + `sh scripts/deploy-frontend.sh` |
+| **Use case** | Simpler deployment, CSR only | Full SSR, edge rendering, independent scaling |
+
+---
+
+## Deployment
+
+Both Workers support **three environments** — local, dev, and production. See
+[Environments](/deployment/environments) for the full reference including deploy commands,
+URL configuration, and TOML scoping rules.
+
+### Backend
+
+```bash
+# Production
+deno task wrangler:deploy
+
+# Dev (deploys to *.workers.dev, ENVIRONMENT=development)
+deno task wrangler:deploy:dev
+```
+
+### Frontend (Independent SSR mode)
+
+```bash
+# Production — preferred (builds, injects CF analytics token, deploys)
+sh scripts/deploy-frontend.sh
+
+# Dev (Angular development build + *.workers.dev deploy)
+deno task ui:deploy:ng:dev
+
+# Production step by step (from repo root):
+pnpm --filter bloqr-frontend run build
+sh scripts/build-worker.sh      # injects/removes {{CF_WEB_ANALYTICS_TOKEN}} in index.html
+pnpm --filter bloqr-frontend run deploy
+```
+
+> <strong>Important:</strong> Always run `scripts/build-worker.sh` after `ng build` and before `wrangler deploy`. It rewrites the `{{CF_WEB_ANALYTICS_TOKEN}}` placeholder in `dist/.../browser/index.html` (or removes the analytics `<script>` tag if `CF_WEB_ANALYTICS_TOKEN` is not set). Skipping this step leaves the placeholder in the deployed HTML.
+
+### CI/CD Automatic Deployment
+
+Both Workers are deployed automatically by GitHub Actions:
+
+```mermaid
+flowchart LR
+    push["Push to main"] --> ci_gate["ci-gate\n(all checks pass)"]
+    ci_gate --> deploy_backend["deploy job\n(bloqr-backend)"]
+    ci_gate --> frontend_build["frontend-build\n(artifact upload)"]
+    frontend_build --> deploy_frontend["deploy-frontend job\n(bloqr-frontend)\nfrontend/** OR worker/** OR src/**\nOR wrangler.toml OR src/version.ts"]
+    deploy_frontend --> inject["Inject CF Web\nAnalytics token\n(build-worker.sh)"]
+    inject --> wrangler_deploy["pnpm run deploy\n(wrangler deploy)"]
+    deploy_backend --> smoke_backend["smoke-test-backend\n/api/health\n/api/version\n/api/auth/providers"]
+    wrangler_deploy --> smoke_frontend["smoke-test-frontend\nhomepage\n/api/auth/providers\n/api/health"]
+    smoke_backend --> deploy_status["deploy-status\n(final summary)"]
+    smoke_frontend --> deploy_status
+
+    tag["Tag push (v*)"] --> validate["validate"]
+    validate --> deploy_frontend_rel["deploy-frontend job\n(release.yml)"]
+    deploy_frontend_rel --> build_rel["pnpm run build\n(ng build)"]
+    build_rel --> inject_rel["Inject CF Web\nAnalytics token\n(build-worker.sh)"]
+    inject_rel --> wrangler_rel["pnpm run deploy\n(wrangler deploy)"]
+```
+
+| Trigger | Backend deploy | Frontend deploy |
+| --- | --- | --- |
+| Push to `main` (worker/compiler change) | `ci.yml` → `deploy` job | `ci.yml` → `deploy-frontend` job |
+| Push to `main` (frontend change) | — | `ci.yml` → `deploy-frontend` job |
+| Push to `main` (`wrangler.toml` / `src/version.ts` change) | `ci.yml` → `deploy` job | `ci.yml` → `deploy-frontend` job |
+| Tag push (`v*`) | `release.yml` → binary/docker builds | `release.yml` → `deploy-frontend` job |
+| Manual dispatch | — | `ci.yml` → `deploy-frontend` job (set `force_deploy_frontend: true`) |
+
+> <strong>Note:</strong> The `deploy-frontend` job triggers whenever `frontend/**`, `worker/**`, `src/**`, `wrangler.toml`, or `src/version.ts` change — so the frontend SSR Worker is always re-deployed alongside the backend when they share a release train.
+
+### Manual Force-Redeploy
+
+If the frontend worker shows <strong>"Assets have not yet been deployed"</strong> or <strong>"Unable to reach API"</strong>, the `bloqr-frontend` Worker may be running a stale version. This typically happens when:
+
+- The `deploy-frontend` CI job was skipped because no monitored files changed.
+- The worker was first registered before the build artifact was available.
+- A version-bump commit landed but the Worker didn't pick up the latest env bindings.
+
+To fix it immediately without a code change:
+
+1. Go to **GitHub Actions → CI → Run workflow**.
+2. Select the `main` branch.
+3. Set <strong>`force_deploy_frontend`</strong> to `true`.
+4. Click **Run workflow**.
+
+This forces `frontend-build` and `deploy-frontend` to run regardless of which files changed.
+
+### Post-Deploy Smoke Tests
+
+After every successful backend or frontend deploy to `main`, CI automatically runs smoke test jobs to verify the deployment:
+
+#### `smoke-test-backend` (needs `deploy`)
+
+| Check | URL | Pass condition |
+| --- | --- | --- |
+| `/api/health` | `https://api.bloqr.dev/api/health` | HTTP 200 + `status` is `"healthy"` or `"degraded"` |
+| `/api/version` | `https://api.bloqr.dev/api/version` | HTTP 200 |
+| `/api/auth/providers` | `https://api.bloqr.dev/api/auth/providers` | HTTP 200 |
+
+#### `smoke-test-frontend` (needs `deploy-frontend`)
+
+| Check | URL | Pass condition |
+| --- | --- | --- |
+| Homepage | `https://app.bloqr.dev/` | HTTP 200 |
+| SSR API proxy | `https://app.bloqr.dev/api/auth/providers` | HTTP 200 (confirms the SSR Worker proxies to the backend correctly) |
+| Health via proxy | `https://app.bloqr.dev/api/health` | HTTP 200 + `status` is `"healthy"` or `"degraded"` |
+
+Both smoke tests:
+
+- Run with `timeout-minutes: 5` and `continue-on-error: false` — a failing smoke test **fails the CI run** and blocks the next commit from deploying on top of a broken state.
+- Wait 15 seconds before probing (allows Cloudflare to propagate the new Worker).
+- Emit a `$GITHUB_STEP_SUMMARY` table so you can see pass/fail at a glance in the Actions UI.
+
+#### Interpreting smoke test failures
+
+| Symptom | Likely cause |
+| --- | --- |
+| `smoke-test-frontend` SSR proxy step fails (HTTP 000 or 502) | `frontend/server.ts` `/api/*` proxy block is broken or the backend is unreachable via service binding |
+| `smoke-test-backend` `/api/auth/providers` fails | Better Auth middleware conflict (e.g. `compress()` wrapping auth responses) |
+| Both `/api/health` checks fail | Worker deploy failed silently; check Cloudflare dashboard for deployment errors |
+| HTTP 200 but `jq` parse error on `/api/health` | `compress()` is still registered globally and returning gzip to curl; confirm `logger()`/`compress()` are scoped to `routes.use('*')` only |
+
+### Local Development
+
+```bash
+# Backend API
+deno task wrangler:dev                                         # → http://localhost:8787
+
+# Frontend (Angular dev server, CSR)
+pnpm --filter bloqr-frontend run start             # → http://localhost:4200
+
+# Frontend (Cloudflare Workers preview, mirrors production SSR)
+pnpm --filter bloqr-frontend run preview           # → http://localhost:8787
+```
+
+---
+
+## Renaming Note
+
+> <strong>These workers were renamed twice. Current names as of this PR:</strong>
+> 
+> | Old name | Interim name (2026-03-07) | Current name | Date |
+> | --- | --- | --- | --- |
+> | `bloqr-backend` | `bloqr-backend-backend` | `bloqr-backend` | 2026-03-07 |
+> | `bloqr-backend-angular-poc` | `bloqr-frontend` | `bloqr-frontend` | 2026-03-07 |
+> | `bloqr-backend-frontend` | `bloqr-frontend` | `bloqr-frontend` | 2026-03-23 |
+> 
+> The backend was renamed back to `bloqr-backend` for brevity. If you have workers under old names in your Cloudflare dashboard, they continue to run until manually deleted. The next `wrangler deploy` creates workers under the current names.
+
+---
+
+## Further Reading
+
+- [`worker/README.md`](https://github.com/bloqr-systems/bloqr-compiler/blob/main/worker/README.md) — Worker API endpoints and implementation details
+- [`frontend/README.md`](https://github.com/bloqr-systems/bloqr-compiler/blob/main/frontend/README.md) — Angular frontend architecture and Angular 22 features
+- [`docs/deployment/cloudflare-pages.md`](/deployment/cloudflare-pages) — Cloudflare Pages deployment
+- [`docs/deployment/GRADUAL_DEPLOYMENTS.md`](/deployment/gradual-deployments) — Gradual (percentage-based) Worker deployments
+- [`docs/deployment/ENVIRONMENTS.md`](/deployment/environments) — Local, dev, and production environment reference
+- [`docs/cloudflare/README.md`](/cloudflare/readme) — Cloudflare-specific features index
+- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/)
+- [Workers Versioning & Deployments](https://developers.cloudflare.com/workers/configuration/versions-and-deployments/)

@@ -1,0 +1,22 @@
+---
+title: Embedding Filter Lists
+description: Patterns for static URLs, batch compilation, and live stream updates.
+---
+
+Use Bloqr outputs in the integration model that best matches your product architecture.
+
+## Static URL with auto-refresh
+
+Use the compiled list URL as a stable upstream source in your product. Refresh on your normal update interval so your users receive newer blocking data automatically.
+
+## Batch API for bulk compilations
+
+When managing many tenants or profiles, submit compile jobs in bulk through the batch endpoint and process results per tenant. This reduces request overhead and keeps workflows consistent.
+
+## SSE stream for live updates
+
+Subscribe to the streaming endpoint when you need real-time compile lifecycle updates (queued, running, complete, error) and immediate propagation into your product UI or orchestration layer.
+
+## Client integrations
+
+- [Client Libraries](https://docs.bloqr.dev/guides/clients/)

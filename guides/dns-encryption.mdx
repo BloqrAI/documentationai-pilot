@@ -1,0 +1,30 @@
+---
+title: DNS Encryption & Privacy Guide
+description: Understand DNS encryption, how Bloqr integrates with encrypted resolvers, and protect your DNS queries from ISPs and eavesdroppers.
+---
+
+# DNS Encryption & Privacy Guide
+
+Learn how DNS encryption protects your privacy, how Bloqr works with encrypted DNS resolvers, and how to set up encrypted DNS across your devices.
+
+## Why DNS Encryption Matters
+
+Your internet service provider (ISP) can see **every domain you visit**, even if the websites themselves are encrypted with HTTPS.
+
+<Callout kind="tip">
+  DNS encryption protects your query privacy from your ISP.
+</Callout>
+
+## Next Steps
+
+1. Choose your resolver - Start with Cloudflare 1.1.1.1 for simplicity
+2. Enable encryption - Use DoH if possible, DoT if not
+3. Add Bloqr filters - Add your compiled Bloqr filter list to your resolver's configuration
+4. Verify it works - Visit [1.1.1.1/help](https://1.1.1.1/help) to check connection status
+5. Monitor your stats - Track queries and blocked domains in your resolver's dashboard
+
+## Related Documentation
+
+- [Technical Deep Dive: DNS Encryption](/guides/dns-encryption-technical) \- For developers and infrastructure teams
+- [Client Libraries](/guides/clients) \- Integrate encrypted DNS into your applications
+- [API Reference](/api/readme) \- Build custom DNS filtering solutions

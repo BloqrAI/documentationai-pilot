@@ -1,0 +1,104 @@
+---
+title: "@bloqr/compiler-core Dependency"
+description: Which compiler engine modules come from the @bloqr/compiler-core JSR package vs. stay vendored locally, and why.
+---
+
+`@bloqr/compiler-core` ([JSR](https://jsr.io/@bloqr/compiler-core), source in
+`bloqrai/bloqr-lists`) is a minimal, open-source extraction of this repo's compiler
+engine — no AGTree, no commercial/Cloudflare-specific features. Before this
+dependency existed, bloqr-compiler vendored a near-duplicate copy of that same engine
+under its own `src/` tree, which had to be hand-synced with every core change
+(BloqrAI/bloqr-compiler#2200, #1131).
+
+This document tracks which modules now come from the package vs. which stay local,
+and why, so the split doesn't quietly rot back into an unexplained duplicate.
+
+## Sourced from `@bloqr/compiler-core`
+
+Formatting-identical to the package (4-space/180-col vendored style vs. the package's
+2-space/100-col style is the only difference) — deleted locally and imported via the
+`@bloqr/compiler-core` alias in `deno.json`:
+
+- **Simple transformations** — `RemoveCommentsTransformation`, `TrimLinesTransformation`,
+  `RemoveEmptyLinesTransformation`, `InsertFinalNewLineTransformation`,
+  `ConvertToAsciiTransformation`, `InvertAllowTransformation`,
+  `RemoveModifiersTransformation`, `DeduplicateTransformation`, `CompressTransformation`,
+  `ExcludeTransformation`, `IncludeTransformation`, and the `Transformation` /
+  `SyncTransformation` / `AsyncTransformation` base classes, plus `TransformationHooks`.
+- **Header generation** — `HeaderGenerator`.
+- **Downloader** — `FilterDownloader` (see the DI note below).
+- **Platform fetchers** — `HttpFetcher`, `PreFetchedContentFetcher`, `CompositeFetcher`,
+  `PlatformDownloader`, and the `platform/types.ts` interfaces.
+- **Utils** — `StringUtils`, `TldUtils`, `Wildcard`, `logger`/`Logger`/`LogLevel`/etc.,
+  `CircuitBreaker`, `BooleanExpressionParser`, `CompilerEventEmitter`.
+
+## Stays local, and why
+
+<strong>AGTree-powered / commercial-only (issue #2200's parser-adapter boundary):</strong>
+`RuleUtils`, `AGTreeParser`, `AGTreeWalker`, `IAGTreeAdapter`, `RuleUtils.deno.ts`,
+`pageshield-rules.ts`, `ValidateTransformation` (AGTree-based, vs. core's plain
+string/regex implementation), `ConflictDetectionTransformation`,
+`RuleOptimizerTransformation` (no core equivalent at all).
+
+<strong>Real feature divergence:</strong> `types/index.ts` and `configuration/schemas.ts` carry the
+browser-syntax engine's `EngineKind`/`engine`/`defaultEngine` fields (`docs/rfc/
+browser-syntax-engine.md`), which core doesn't have. Everything that transitively
+depends on those types for validation — `configuration/ConfigurationManager.ts`,
+`configuration/ConfigurationValidator.ts`, `configuration/index.ts`,
+`configuration/sources/`, `types/validation.ts` (AGTree `ast` field) — stays local too,
+even where the file's own diff against core is formatting-only, because deleting it
+would silently swap in core's schema/type (no `engine` field) underneath.
+
+<strong>`TransformationRegistry`/`TransformationPipeline` coupling:</strong> `TransformationRegistry.ts`
+stays local because it registers the commercial-only `ConflictDetectionTransformation`
+and `RuleOptimizerTransformation` alongside the standard set. `FilterCompiler.ts` and
+`SourceCompiler.ts` are otherwise formatting-identical to core, but also stay local:
+both default-construct their internal `TransformationPipeline` from this same local
+registry when no pipeline is injected, so the main (non-browser-syntax) compilation
+path keeps ConflictDetection/RuleOptimizer support. Deleting them in favor of core's
+versions would default to core's own plain pipeline instead — silently dropping
+those two transformations from the primary compilation path. (Injecting the local
+pipeline into core's classes via their `dependencies.pipeline` option was considered,
+but duplicating `FilterCompiler`'s internal event/hook wiring around that injection
+point — rather than reusing it wholesale by staying local — risked a subtle
+behavioral regression for too little benefit, given the files are otherwise
+unmodified.) `IncrementalCompiler.ts` stays local for the same pipeline reason, plus
+its own downloader DI need (see below).
+
+<strong>Downloader DI:</strong> `FilterDownloader` itself moved to the package, but bloqr-compiler's
+former vendored copy defaulted `resolveCustomDownloader` to the local plugin registry
+(`globalRegistry.getDownloader`) so custom schemes (`s3://`, `gcs://`, ...) worked
+without extra wiring; the package's own default is a no-op (no plugin registry there).
+Every call site that constructs a `FilterDownloader` (directly, or via `SourceCompiler`/
+`FilterCompiler`) now wires that default explicitly instead:
+`src/compiler/SourceCompiler.ts` (`defaultDownloaderOptions()`), `src/cli/CliApp.ts`,
+`src/compiler/IncrementalCompiler.ts`, `src/services/FilterService.ts` (stays local for
+this reason alone — otherwise formatting-identical to core — since its `downloadAll()`
+has no options parameter to inject through), and `src/storage/example.ts`.
+
+<strong>Not exported from `@bloqr/compiler-core`'s package root:</strong> the package's `deno.json`
+only declares `.`, `./lib`, `./orchestration`, `./console`, and `./cli` as importable
+subpaths; anything not re-exported from `.` (`src/index.ts`) can't be consumed at all,
+regardless of how similar its content is. This keeps `ErrorUtils` (bloqr-compiler
+consumes `ConfigurationError`/`ErrorCode`/`FileSystemError`/`StorageError`/
+`TransformationError`, which the package defines but doesn't re-export from its root),
+`ErrorReporter`, `AsyncRetry`, `Benchmark`, `PathUtils`, `checksum`, `headerFilter`,
+`semver`, and `downloader/ContentFetcher.ts` (`detectFileSystem`/`DenoFileSystem`/
+`NodeFileSystem`, used directly by `src/cli.deno.ts`/`src/cli.bun.ts`/
+`src/cli/OutputWriter.ts`/`src/cli/CliApp.ts`) local, unchanged.
+
+<strong>Commercial/Cloudflare-specific, no core equivalent:</strong> `platform/WorkerCompiler.ts`,
+`platform/BrowserFetcher.ts`, `platform/FeatureFlagService.ts`,
+`configuration/ConfigurationLoader.ts` (in `src/cli/`, not `src/configuration/` —
+unrelated to and not to be confused with the orphaned `configuration/sources/`
+cluster), `services/ASTViewerService.ts`, `services/AnalyticsService.ts`,
+`services/PipelineService.ts`, and the diagnostics/, analytics/, ast/, filters/,
+formatters/, pipeline/, plugins/, query/, queue/, schemas/, storage/ trees.
+
+## Mixed barrels
+
+`compiler/index.ts`, `downloader/index.ts`, `platform/index.ts`, `utils/index.ts`, and
+`transformations/index.ts` re-export a mix of package-sourced and local symbols under
+their existing local paths, so most internal call sites needed no changes at all —
+only files that imported a deleted module by its direct file path (bypassing the
+barrel) needed repointing.

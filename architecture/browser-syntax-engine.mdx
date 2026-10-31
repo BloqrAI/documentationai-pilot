@@ -1,0 +1,138 @@
+---
+title: Browser-Syntax Engine
+description: How the compiler routes DNS-style and browser-syntax (cosmetic/network/scriptlet) sources through separate engines, and what's implemented today vs. planned.
+---
+
+Bloqr Compiler compiles two distinct filter-list grammars:
+
+- **DNS/hosts-style** — domain-oriented rules (`||example.com^`, `0.0.0.0 example.com`)
+  consumed by DNS resolvers (AdGuard Home/DNS, Pi-hole). This is the original, and
+  still default, engine.
+- **Browser-syntax** — AdGuard's cosmetic/network/scriptlet grammar (`##.selector`,
+  `$script,third-party`, `#@#`, redirect/scriptlet calls) consumed by browser
+  extensions.
+
+One compiler handles both. A configuration's sources are routed to whichever engine
+understands their grammar — automatically, or forced via a CLI flag or per-source
+override — and **DNS and browser-syntax rules are always compiled and written to
+separate output artifacts**, never merged, since they're consumed by different
+parsers.
+
+<Callout kind="info">
+  **Implementation status**
+
+  The core library (`src/`) and CLI implement source detection, both engines, and
+  output separation, described below. The `worker/` API and `frontend/` Angular UI do
+  **not** yet expose engine selection or browser-syntax output — see
+  [What's not implemented yet](#whats-not-implemented-yet).
+</Callout>
+
+## How routing works
+
+Each source resolves to an engine (`'dns'` or `'browser'`) via this precedence, first
+match wins:
+
+1. **Explicit source override** — `source.engine: 'dns' | 'browser'` in the
+   configuration.
+2. **Legacy explicit** — `source.type === 'hosts'` always resolves to `'dns'` (hosts
+   syntax has no browser-syntax equivalent).
+3. **Content sniffing** — a lightweight, dependency-free classifier
+   (`classifyLine`/`detectEngineFromLines` in `src/engines/EngineDetector.ts`) looks at
+   cosmetic separators (`##`, `#@#`, …), hosts-file syntax, and browser-only network
+   modifiers (`$script`, `$csp=`, `$redirect=`, …) to vote per line.
+4. **Configuration default** — `configuration.defaultEngine`, falling back to `'dns'`
+   — so every configuration written before this feature existed keeps behaving
+   exactly as it did.
+
+The CLI's `--engine` flag (`auto` | `dns` | `browser`) can force every source through
+one engine, bypassing steps 1–4 entirely.
+
+```jsonc
+{
+    "name": "Mixed List",
+    "sources": [
+        { "source": "https://example.org/hosts.txt", "type": "hosts" },
+        { "source": "https://example.org/cosmetic.txt", "engine": "browser" }
+    ]
+}
+```
+
+## The two engines
+
+|  | DNS engine | Browser-syntax engine |
+| --- | --- | --- |
+| Class | `FilterCompiler` | `BrowserSyntaxCompiler` |
+| Parsing | `@adguard/agtree` (via `AGTreeParser`/`RuleUtils`) | same — already shared infrastructure |
+| Default transformations | `RemoveComments`, `Deduplicate`, `Compress`, `Validate`, `TrimLines`, `InsertFinalNewLine` | `RemoveComments`, `Deduplicate`, `RemoveEmptyLines`, `TrimLines`, `InsertFinalNewLine` |
+| Rejects | — | `Compress`, `Validate`, `ValidateAllowIp`, `InvertAllow` (DNS-only; see below) |
+
+`Compress` and `Validate` are written specifically against DNS/hosts-style rules —
+`Compress` converts hosts-format entries to `||domain^` and dedupes by hostname;
+`Validate` enforces the DNS-blocker-supported modifier allowlist and domain-only
+patterns. Both would silently corrupt or strip valid cosmetic/network browser rules,
+so `BrowserSyntaxCompiler` rejects them outright if requested directly, rather than
+running them and producing a broken list.
+
+When a single configuration mixes both engines, `MultiEngineCompiler` orchestrates
+both compilers and returns one `CompilationResult` per engine present. A shared
+top-level `transformations` list (e.g. one built from CLI defaults) has any DNS-only
+entries silently filtered out for the browser bucket, so one config file doesn't need
+a separate transformations list per engine to avoid an error — see
+`MultiEngineCompiler`'s `filterToBrowserSafe`.
+
+## CLI usage
+
+```sh
+# Auto-detect per source (default) — mixed config writes two files
+bloqr-compiler -c config.json -o list.txt
+# -> list.txt (DNS rules) + list.browser.txt (browser-syntax rules, derived name)
+
+# Name the browser-syntax output explicitly
+bloqr-compiler -c config.json -o list.txt --browser-output cosmetic.txt
+
+# Force every source through one engine
+bloqr-compiler -c config.json -o list.txt --engine dns
+bloqr-compiler -c config.json -o list.txt --engine browser
+```
+
+When every source in a configuration resolves to the DNS engine (still true for 100%
+of pre-existing configs), the CLI's original single-file code path runs completely
+unchanged — this feature is purely additive.
+
+`--stdout` is not supported for a mixed-engine configuration (two output streams
+can't share stdout); use `--output` and `--browser-output` instead.
+
+## Library usage
+
+```ts
+import { MultiEngineCompiler } from '@bloqr/compiler';
+
+const compiler = new MultiEngineCompiler();
+const { dns, browser } = await compiler.compile(configuration);
+
+// dns / browser are each `CompilationResult | undefined` — present only when the
+// configuration had at least one source resolving to that engine.
+```
+
+`BrowserSyntaxCompiler` can also be used standalone for a browser-syntax-only
+configuration, with the same `compile()` / `compileWithMetrics()` shape as
+`FilterCompiler`.
+
+## What's not implemented yet
+
+- <strong>`worker/` API</strong> — no `engine` field on compile requests, no per-engine output
+  URLs. The Cloudflare Worker only ever produces DNS-engine output today.
+- <strong>`frontend/` Angular UI</strong> — no engine selection or browser-syntax output display.
+- <strong>Cosmetic-AST-aware `Deduplicate`</strong> — the browser engine's default `Deduplicate`
+  is exact-string dedup (safe, but a cosmetic rule that's semantically identical
+  under a different serialization won't be caught).
+- <strong>`@adguard/tsurlfilter`-based validation</strong> — a browser-syntax equivalent of the
+  DNS engine's `Validate` transformation, i.e. rejecting rules that don't parse into
+  something a real browser engine would accept, rather than only rejecting the
+  DNS-only transformation names.
+
+## See also
+
+- RFC: Browser-Syntax Engine Integration — original
+  design proposal and rationale.
+- [CLI Reference](/usage/cli) — full `--engine`/`--browser-output` flag reference.

@@ -1,0 +1,295 @@
+---
+title: Better Auth Plugin Extension Pack
+description: A task-oriented guide to the batch of Better Auth plugins wired into worker/lib/auth.ts on top of the pre-existing...
+---
+
+# Better Auth Plugin Extension Pack
+
+A task-oriented guide to the batch of Better Auth plugins wired into `worker/lib/auth.ts`
+on top of the pre-existing `dash()`/`sentinel()`/`bearer()`/`twoFactor()`/`multiSession()`/
+`admin()`/`organization()` set. For the summary table see the
+[Plugin Catalogue](/auth/better-auth-developer-guide#plugin-catalogue) in the developer guide —
+this document covers *how to turn each conditional plugin on*, what it exposes once enabled,
+and the gotchas to know before flipping a flag in production.
+
+<strong>Source of truth:</strong> every claim in this document is backed by JSDoc in `worker/lib/auth.ts` —
+the module-level summary at the top of the file, and the `isXEnabled()`/`buildXOptions()`
+helper functions for each plugin. If this document and the code ever disagree, the code wins;
+please file a fix.
+
+---
+
+## At a Glance
+
+| Tier | Plugins | Behaviour |
+| --- | --- | --- |
+| Always-on | `haveIBeenPwned()`, `lastLoginMethod()`, `oneTimeToken()`, `jwt()`, `deviceAuthorization()` | Mounted unconditionally, no config needed |
+| Conditionally-loaded | `sentinel()`, `captcha()`, `apiKey()`, `mcp()`, `oidcProvider()`, `sso()`, `scim()`, `passkey()` | Off by default; each needs an explicit env var (or, for `captcha()`, a secret) |
+| Auto-enabled | `magicLink()`, `emailOTP()` | Mounted automatically once a viable email provider (`RESEND_API_KEY` or `SEND_EMAIL`) is configured |
+| Installed, never mounted | `stripe()` | Dependency + builder exist; deliberately never added to the `plugins` array |
+
+<strong>All conditionally-loaded plugins default to off.</strong> Deploying this extension pack with no
+new env vars set is a no-op for existing users — nothing changes until a flag is deliberately
+flipped.
+
+---
+
+## Enabling a Conditional Plugin
+
+Every conditional plugin follows the same pattern:
+
+1. Set the `BETTER_AUTH_*_ENABLED=true` var (local: `.dev.vars`; production: `wrangler.toml [vars]`
+   for non-secrets or `wrangler secret put` for anything secret-shaped).
+2. Set any plugin-specific config the flag requires (e.g. `BETTER_AUTH_PASSKEY_RP_ID`).
+3. Deploy. `createAuth()` logs `[better-auth] plugin "<name>" enabled` on every request once
+   the flag is live — check `wrangler tail` to confirm.
+4. If the plugin's config fails validation, `createAuth()` throws a `WorkerConfigurationError`
+   or `AuthPluginConfigError` (see [Troubleshooting](#troubleshooting) below) — the Worker
+   will not silently misbehave, it will fail loudly at request time until the config is fixed.
+
+See [Configuration Guide → Plugin Extension Pack](/auth/configuration#better-auth-plugin-extension-pack-conditional)
+for the full env var reference table.
+
+---
+
+## `apiKey()` — Official API Key Plugin
+
+<strong>Flag:</strong> `BETTER_AUTH_APIKEY_ENABLED=true`
+<strong>Package:</strong> `@better-auth/api-key`
+<strong>Endpoints:</strong> `/api/auth/api-key/*` (create, list, verify, update, delete)
+<strong>Header:</strong> `x-api-key: <key>`
+
+<Callout kind="danger">
+  **Read this before enabling**
+
+  This is a **second, independent** API-key system. It does not replace, integrate with, or
+  share any state with this project's existing custom implementation
+  (`worker/middleware/api-key-utils.ts`, `worker/middleware/auth.ts`,
+  `worker/handlers/api-keys.ts`, the `ApiKey` Prisma model / `api_keys` table, `blq_`-prefixed
+  keys authenticated via `Authorization: Bearer`). See `isApiKeyPluginEnabled()`'s JSDoc in
+  `auth.ts` for the full rationale.
+</Callout>
+
+What's different between the two systems:
+
+|  | Legacy (`worker/handlers/api-keys.ts`) | Official (`apiKey()` plugin) |
+| --- | --- | --- |
+| Header | `Authorization: Bearer blq_...` | `x-api-key: <key>` |
+| Hashing | SHA-256 | Plugin's own hasher |
+| Storage | `ApiKey` model, `api_keys` table | `BetterAuthApiKey` model, `better_auth_api_keys` table |
+| Scopes | App-defined (`compile`, `admin`, ...) enforced by `requireScope()` | Plugin's own `permissions` object |
+| Rate limiting | `rateLimitPerMinute` column, enforced in `worker/middleware/index.ts` | Plugin's own built-in rate limiting |
+| Request path affected | `authenticateApiKey()` / `authenticateRequestUnified()` | Better Auth's own auto-mounted routes only |
+
+Enabling the plugin does **not** touch the compiler API's existing auth path at all — a
+`blq_...` key and an official-plugin key are two unrelated credentials that happen to both
+live in the same database. Do not point client code at both without a clear reason; treat any
+future consolidation of the two systems as its own migration project, not a side effect of
+flipping this flag.
+
+---
+
+## `mcp()` and `oidcProvider()` — OAuth Provider Plugins
+
+<strong>Flags:</strong> `BETTER_AUTH_MCP_ENABLED=true` **or** `BETTER_AUTH_OIDC_ENABLED=true` — **never both**
+
+<Callout kind="danger">
+  **Mutually exclusive**
+
+  `createAuth()` calls `assertMcpOidcProviderNotBothEnabled()` at startup and throws a
+  `WorkerConfigurationError` if both flags are `"true"` simultaneously. Both plugins mount OAuth
+  provider endpoints against the same `oauthApplication` / `oauthAccessToken` / `oauthConsent`
+  tables (`mcp()`'s own docs describe it as "based on" the OIDC Provider plugin) — running both
+  would register overlapping routes with two different plugins claiming authority over the same
+  records.
+</Callout>
+
+Pick based on your use case:
+
+- <strong>`mcp()`</strong> — turns bloqr into an OAuth provider specifically for [MCP](https://modelcontextprotocol.io)
+  clients. Given the `AgentSession` model already in the Prisma schema, this is the natural
+  fit if AI agents/tools need to authenticate against bloqr's API.
+- <strong>`oidcProvider()`</strong> — general-purpose: makes bloqr a full OIDC provider for any third-party
+  or enterprise OAuth client, with client registration, consent screens, and a UserInfo
+  endpoint.
+
+Both share the same three Prisma tables (`OauthApplication`, `OauthAccessToken`,
+`OauthConsent` — see [Database Schema](#database-schema) below) and both interact with the
+always-on `jwt()` plugin:
+
+- `oidcProvider()` is configured with `useJWTPlugin: true` (always, when active) so ID tokens
+  are verifiable via the JWKS endpoint rather than only via the app secret.
+- Whenever either plugin is active, `createAuth()` sets top-level `disabledPaths: ['/token']`
+  and passes `disableSettingJwtHeader: true` to `jwt()` — the OAuth flow's own
+  `/oauth2/token` and `/oauth2/userinfo` equivalents take over from `jwt()`'s own `/token`
+  endpoint and `set-auth-jwt` header, per Better Auth's documented "OAuth Provider Mode".
+
+`oidcProvider()` also accepts `BETTER_AUTH_OIDC_ALLOW_DYNAMIC_CLIENT_REGISTRATION=true` to open
+the `/register` endpoint to self-service client registration (default: off — trusted/manually
+registered clients only).
+
+---
+
+## `sso()` — Enterprise SAML/OIDC Login
+
+<strong>Flag:</strong> `BETTER_AUTH_SSO_ENABLED=true`
+<strong>Package:</strong> `@better-auth/sso`
+
+Lets enterprise customers configure their own identity provider (SAML and/or OIDC) to log
+their org members into bloqr. Safe to enable with zero providers registered — no enterprise
+customer needs to exist yet for the flag to be turned on; it just exposes the plugin's
+provider-registration and SSO callback endpoints. See the
+[SAML SSO with Okta guide](https://better-auth.com/docs/guides/saml-sso-with-okta) upstream for
+a worked example once you're ready to register a real provider.
+
+---
+
+## `scim()` — Inbound User Provisioning
+
+<strong>Flag:</strong> `BETTER_AUTH_SCIM_ENABLED=true`
+<strong>Package:</strong> `@better-auth/scim`
+
+Exposes a [SCIM 2.0](https://simplecloud.info/#Specification) server so an enterprise
+identity provider can push user create/update/deactivate operations into bloqr directly,
+rather than relying on JIT provisioning at login. `providerOwnership.enabled: true` is set by
+`buildScimOptions()` — personal (non-organization) SCIM connections can only be managed by the
+user who generated the connection's bearer token, the safer default per the plugin's docs.
+
+---
+
+## `passkey()` — WebAuthn
+
+<strong>Flag:</strong> `BETTER_AUTH_PASSKEY_ENABLED=true`
+<strong>Required:</strong> `BETTER_AUTH_PASSKEY_RP_ID` (Relying Party ID)
+<strong>Package:</strong> `@better-auth/passkey`
+
+<Callout kind="danger">
+  **Get the RP ID right before enabling**
+
+  `BETTER_AUTH_PASSKEY_RP_ID` must be the auth server's **bare effective domain** — no
+  `https://` scheme, no port, no path. Examples: `bloqr.dev`, `api.bloqr.dev`; `localhost` is
+  valid for local dev. Getting this wrong doesn't throw an error visibly to an operator — it
+  just silently fails every WebAuthn registration/sign-in ceremony in the browser. `auth.ts`
+  Zod-validates the value at startup (`parsePasskeyRpId()`) and throws a
+  `WorkerConfigurationError`/`AuthPluginConfigError` for anything that isn't a bare domain, so a
+  malformed value fails at deploy time rather than as a confusing browser-side bug report.
+</Callout>
+
+`BETTER_AUTH_PASSKEY_RP_NAME` (optional, defaults to `"Bloqr"`) sets the human-readable name
+shown in the OS passkey prompt.
+
+---
+
+## `captcha()` — Cloudflare Turnstile
+
+<strong>Gate:</strong> presence of `TURNSTILE_SECRET_KEY` (no separate enabled flag — matches the
+`dash()`/`sentinel()` convention of "secret present → feature active")
+<strong>Provider:</strong> `cloudflare-turnstile` (not reCAPTCHA/hCaptcha/CaptchaFox — this Worker already
+runs entirely on Cloudflare's edge)
+<strong>Protected endpoints (default):</strong> `/sign-up/email`, `/sign-in/email`, `/request-password-reset`
+
+<Callout kind="danger">
+  **Coordinate the client rollout before setting the secret**
+
+  As soon as `TURNSTILE_SECRET_KEY` is set, the protected endpoints above start rejecting any
+  request that doesn't include an `x-captcha-response` header — including from any client
+  (frontend build, CLI, mobile app, third-party integration) that hasn't yet been updated to
+  render the Turnstile widget and submit its token. Make sure every consumer of `/sign-up/email`,
+  `/sign-in/email`, and `/request-password-reset` sends the header before setting the secret in
+  production, not after.
+</Callout>
+
+The frontend's Content-Security-Policy (`frontend/server.ts`) already allow-lists
+`https://challenges.cloudflare.com` for both `script-src` (the Turnstile `api.js` loader) and
+`frame-src` (the sandboxed widget iframe), so no CSP changes are needed to render the widget
+once the frontend implements it.
+
+---
+
+## `stripe()` — Installed, Never Mounted
+
+<strong>Package:</strong> `@better-auth/stripe`
+
+`buildStripeOptions()` exists in `auth.ts` and is exported/tested, but its result is **never**
+passed to `stripe()`, and `stripe()` is never added to the `plugins` array. This is deliberate:
+the project already has a mature, hand-rolled Stripe billing system that predates this plugin
+(`worker/services/stripe-service.ts`, `worker/routes/stripe.routes.ts`,
+`worker/stripe-webhook-processor-do.ts`, and the `SubscriptionPlan`/`PaygCustomer`/
+`PaygPaymentEvent`/`PaygSession`/`StripeProductCache`/`BillingUsageEvent` Prisma models).
+Mounting the plugin's own customer/subscription/webhook handling alongside that system risks
+duplicate Stripe customer records and double-processed webhook events — real financial/data-
+integrity risk, not a style preference.
+
+If a future project wants to actually adopt this plugin, treat it as its own migration: pick a
+customer/subscription reconciliation strategy against the existing tables, add the `stripe`
+npm SDK dependency (not currently installed — this repo's billing code is fetch-based), and
+only then construct a real `stripeClient` and mount the plugin.
+
+---
+
+## Database Schema
+
+The migration `prisma/migrations/20260710000000_add_better_auth_plugin_tables/migration.sql`
+adds:
+
+| Table | Plugin(s) | Notes |
+| --- | --- | --- |
+| `jwks` | `jwt()` (always-on) | Signing keypairs; `privateKey` is AES-256-GCM encrypted at rest by Better Auth |
+| `device_codes` | `deviceAuthorization()` (always-on) | RFC 8628 device/user codes |
+| `oauth_applications`, `oauth_access_tokens`, `oauth_consents` | `mcp()` / `oidcProvider()` (shared schema) | Registered OAuth clients, issued tokens, recorded consent |
+| `sso_providers` | `sso()` | Registered enterprise identity providers |
+| `scim_providers` | `scim()` | SCIM directory connections |
+| `passkeys` | `passkey()` | Registered WebAuthn credentials |
+| `better_auth_api_keys` | `apiKey()` | Deliberately separate from the pre-existing `api_keys` table |
+| `users.last_login_method` (column) | `lastLoginMethod()` (always-on) | Nullable — absent until a user's first login after the plugin was enabled |
+
+All tables are created regardless of whether their plugin's flag is currently on, so enabling
+a conditional plugin later is a config-only change — no follow-up migration required. The
+migration SQL was hand-written to match this repo's existing style (`IF NOT EXISTS`,
+`gen_random_uuid()`, `NOW()`) and cross-checked against Prisma's own `prisma migrate diff`
+output for column-level correctness.
+
+---
+
+## Testing
+
+- `worker/lib/auth-plugin-schemas.test.ts` — pure-function tests for the Zod validation layer
+  (`parsePluginFlag`, `parsePasskeyRpId`, `parseTurnstileSecretKey`, `AuthPluginConfigError`).
+- `worker/lib/auth.test.ts` — pure-function tests for every `isXEnabled()`/`buildXOptions()`
+  helper (gate logic, option shapes, mutual-exclusivity assertion, error messages). Neither
+  file requires a live database connection — `createAuth()` itself still needs a real
+  Hyperdrive/Postgres connection and is covered by the E2E suite instead.
+
+```bash
+deno test --allow-read --allow-write --allow-net --allow-env \
+  worker/lib/auth.test.ts worker/lib/auth-plugin-schemas.test.ts
+```
+
+---
+
+## Troubleshooting
+
+<strong>`AuthPluginConfigError: BETTER_AUTH_..._ENABLED must be "true" or "false" (got ...)`</strong>
+A flag var is set to something other than the literal strings `"true"` or `"false"` — a common
+typo is `"TRUE"`, `"1"`, or `"yes"`. Unlike the older `isSentinelEnabled()` (which silently
+treats any non-`"true"` value as disabled, kept for backwards compatibility), every new flag
+in this pack validates strictly and throws rather than silently doing nothing — fix the value
+or unset the var entirely to leave the plugin off.
+
+<strong>`WorkerConfigurationError: BETTER_AUTH_MCP_ENABLED and BETTER_AUTH_OIDC_ENABLED cannot both be "true"`</strong>
+See [`mcp()` and `oidcProvider()`](#mcp-and-oidcprovider--oauth-provider-plugins) above — pick one.
+
+<strong>`WorkerConfigurationError: BETTER_AUTH_PASSKEY_ENABLED is "true" but BETTER_AUTH_PASSKEY_RP_ID is not set`</strong>
+See [`passkey()`](#passkey--webauthn) above — the RP ID is required whenever the plugin is on.
+
+<strong>`AuthPluginConfigError: BETTER_AUTH_PASSKEY_RP_ID is invalid: must be a bare domain ...`</strong>
+The RP ID includes a scheme, port, or path. Strip it down to the bare domain (e.g.
+`https://api.bloqr.dev:443/` → `api.bloqr.dev`).
+
+---
+
+## Related Documentation
+
+- [Better Auth Developer Guide](/auth/better-auth-developer-guide) — full plugin catalogue table, adapter swapping, custom providers
+- [Configuration Guide](/auth/configuration) — complete environment variable reference
+- [`docs/architecture/better-auth-plugins-analysis.mdx`](/architecture/better-auth-plugins-analysis) — original cost/benefit analysis that this extension pack implements (superseded by this document and the `auth.ts` JSDoc for current status)

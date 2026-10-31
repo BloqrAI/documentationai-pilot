@@ -1,0 +1,46 @@
+---
+title: Master Block List
+description: The master block list is the canonical nuisance-domain baseline generated from Cloudflare Radar threat intelligence.
+---
+
+The **master block list** is the canonical nuisance-domain baseline generated from Cloudflare Radar threat intelligence.
+
+## How it works
+
+- Radar data is fetched by the Worker sync workflow every 4 hours (and on-demand).
+- Events are validated, transformed into AST rule nodes, and compiled into vendor formats.
+- Active entries are persisted in D1 (`master_block_list`) and mirrored to Neon for redundancy/diff queries.
+
+## Real-time updates
+
+The `/block-list/stream` endpoint emits `block-list-updated` events after sync completion.<br />The UI uses this stream to refresh table data and show an update badge.
+
+## Snapshots and diffs
+
+- Snapshots are stored in `block_list_snapshots`.
+- You can compare two snapshots via `/block-list/diff?from=<id>&to=<id>`.
+- The diff view shows added, removed, and unchanged entry counts.
+
+## Exclusions
+
+Users can manage exclusions from `/block-list/exclusions` using:
+
+- domain
+- wildcard
+- regex
+- cidr
+
+Exclusions are applied during the next sync cycle before entries are persisted.
+
+## API summary
+
+- `GET /block-list`
+- `GET /block-list/stream`
+- `GET /block-list/snapshots`
+- `GET /block-list/snapshots/:id`
+- `GET /block-list/diff`
+- `POST /block-list/sync` (admin)
+- `GET /block-list/exclusions` (pro+)
+- `POST /block-list/exclusions` (pro+)
+- `DELETE /block-list/exclusions/:id` (pro+)
+- `GET /block-list/export?format=adguard|pihole|hosts|dnsmasq`
