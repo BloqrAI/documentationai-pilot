@@ -1458,11 +1458,11 @@
     "primaryColor": "#FF5500",
     "font": "Inter"
   },
-  "favicon": "/assets/favicon.svg",
-  "logo-dark": "/assets/bloqr-logo.svg",
-  "logo-light": "/assets/bloqr-logo.svg",
-  "logo-small-dark": "/assets/bloqr-mark.svg",
-  "logo-small-light": "/assets/bloqr-mark.svg",
+  "favicon": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
+  "logo-dark": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
+  "logo-light": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
+  "logo-small-dark": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
+  "logo-small-light": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
   "ai": {
     "ai-assistant:enabled": true,
     "ai-assistant:style": "floating",
