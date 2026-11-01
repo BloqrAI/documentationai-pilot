@@ -8,6 +8,9 @@
   "customCss": [
     {
       "src": "styles/migration.css"
+    },
+    {
+      "src": "styles/filter.css"
     }
   ],
   "redirects": [
@@ -556,7 +559,7 @@
             "icon": "book"
           },
           {
-            "title": "Bloqr™ Documentation",
+            "title": "Platform Overview",
             "path": "overview",
             "icon": "book"
           },
@@ -1438,5 +1441,48 @@
         "tab": "Changelog"
       }
     ]
-  }
+  },
+  "colors": {
+    "light": {
+      "brand": "#E54A00",
+      "heading": "#0F172A",
+      "text": "#334155"
+    },
+    "dark": {
+      "brand": "#FF5500",
+      "heading": "#F1F5F9",
+      "text": "#94A3B8"
+    }
+  },
+  "theme": {
+    "primaryColor": "#FF5500",
+    "font": "Inter"
+  },
+  "favicon": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
+  "logo-dark": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793571177758-588s9juin29-bloqr-logo.svg?rasterize-bypass=true",
+  "logo-light": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793571177758-588s9juin29-bloqr-logo.svg?rasterize-bypass=true",
+  "logo-small-dark": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
+  "logo-small-light": "https://blob-cdn.documentation.ai/org-4d023527-a405-4c1f-877b-ee6b0169abd9/doc-536506ff-9e3c-4894-9b05-eac45383ccfd/1793492556271-8e4ptrc3zia-favicon.svg?rasterize-bypass=true",
+  "ai": {
+    "ai-assistant:enabled": true,
+    "ai-assistant:style": "floating",
+    "ai-assistant:position": "bottom-spaced",
+    "page-actions": [
+      "copy",
+      "view",
+      "claude",
+      "chatgpt",
+      "mcp"
+    ],
+    "ai-assistant:starter-questions": [
+      "How do I get started with the Bloqr Compiler API?",
+      "How does authentication work?",
+      "Where do I find troubleshooting steps?"
+    ]
+  },
+  "scripts": [
+    {
+      "src": "scripts/default-dark.js"
+    }
+  ]
 }
