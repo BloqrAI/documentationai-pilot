@@ -8,6 +8,9 @@
   "customCss": [
     {
       "src": "styles/migration.css"
+    },
+    {
+      "src": "styles/filter.css"
     }
   ],
   "redirects": [
@@ -556,7 +559,7 @@
             "icon": "book"
           },
           {
-            "title": "Bloqr™ Documentation",
+            "title": "Platform Overview",
             "path": "overview",
             "icon": "book"
           },
@@ -1437,6 +1440,44 @@
         ],
         "tab": "Changelog"
       }
+    ]
+  },
+  "colors": {
+    "light": {
+      "brand": "#E54A00",
+      "heading": "#0F172A",
+      "text": "#334155"
+    },
+    "dark": {
+      "brand": "#FF5500",
+      "heading": "#F1F5F9",
+      "text": "#94A3B8"
+    }
+  },
+  "theme": {
+    "primaryColor": "#FF5500",
+    "font": "Inter"
+  },
+  "favicon": "/assets/favicon.svg",
+  "logo-dark": "/assets/bloqr-logo.svg",
+  "logo-light": "/assets/bloqr-logo.svg",
+  "logo-small-dark": "/assets/bloqr-mark.svg",
+  "logo-small-light": "/assets/bloqr-mark.svg",
+  "ai": {
+    "ai-assistant:enabled": true,
+    "ai-assistant:style": "floating",
+    "ai-assistant:position": "bottom-spaced",
+    "page-actions": [
+      "copy",
+      "view",
+      "claude",
+      "chatgpt",
+      "mcp"
+    ],
+    "ai-assistant:starter-questions": [
+      "How do I get started with the Bloqr Compiler API?",
+      "How does authentication work?",
+      "Where do I find troubleshooting steps?"
     ]
   }
 }

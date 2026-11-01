@@ -1,0 +1,41 @@
+/*
+ * Filter (Bloqr design system) theme for Bloqr Doqs.
+ * Values mirror @bloqr/design-system tokens/colors.css and typography.css.
+ * Fonts are self-hosted from /fonts: no external font CDN.
+ * Dark-first; no hardcoded light surfaces.
+ */
+@font-face { font-family: 'Space Grotesk'; src: url('/fonts/SpaceGrotesk-VariableFont_wght.ttf') format('truetype'); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('/fonts/inter-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Inter'; src: url('/fonts/inter-latin-500-normal.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/fonts/jetbrains-mono-latin-400-normal.woff2') format('woff2'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/fonts/jetbrains-mono-latin-500-normal.woff2') format('woff2'); font-weight: 500; font-display: swap; }
+
+:root {
+  --bg-base: #070B14;
+  --bg-surface: #0E1829;
+  --bg-elevated: #162035;
+  --orange-500: #FF5500;
+  --orange-400: #FF7033;
+  --cyan-500: #00D4FF;
+  --cyan-400: #33DDFF;
+  --fg-1: #F1F5F9;
+  --fg-2: #94A3B8;
+  --border: #1E2D40;
+  --font-display: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
+  --font-body: 'Inter', 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --brand: var(--orange-500);
+}
+
+body { font-family: var(--font-body); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); letter-spacing: -0.01em; }
+code, pre, kbd, samp { font-family: var(--font-mono); }
+
+/* Links are cyan, CTAs and active states are orange. */
+.prose a:not([class]) { color: var(--cyan-500); }
+.prose a:not([class]):hover { color: var(--cyan-400); }
+::selection { background: rgba(255, 85, 0, 0.35); }
+:focus-visible { outline: 2px solid var(--cyan-500); outline-offset: 2px; }
+
+/* Dark surfaces from Filter. */
+:root.dark body, .dark body { background: var(--bg-base); color: var(--fg-1); }
