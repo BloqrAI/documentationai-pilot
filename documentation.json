@@ -644,13 +644,6 @@
         "icon": "code",
         "pages": [
           {
-            "group": "API Spec",
-            "pages": [],
-            "icon": "code",
-            "openapi": "https://api.bloqr.dev/api/openapi.json",
-            "openapi-output": "api-spec"
-          },
-          {
             "title": "API Reference",
             "path": "api-reference",
             "icon": "code"
