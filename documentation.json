@@ -1484,5 +1484,8 @@
     {
       "src": "scripts/default-dark.js"
     }
-  ]
+  ],
+  "seo": {
+    "defaultDescription": "Bloqr is your privacy layer at the network level: encrypted DNS, filtering you control, and an API to build on. Guides, reference and architecture, all in one place."
+  }
 }
