@@ -280,6 +280,11 @@
         "icon": "book",
         "pages": [
           {
+            "title": "Bloqr™ Documentation",
+            "path": "index",
+            "icon": "book"
+          },
+          {
             "group": "Agent",
             "pages": [
               {
@@ -551,11 +556,6 @@
               }
             ],
             "icon": "book-open"
-          },
-          {
-            "title": "Bloqr™ Documentation",
-            "path": "index",
-            "icon": "book"
           },
           {
             "title": "Platform Overview",
