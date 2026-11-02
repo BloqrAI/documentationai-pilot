@@ -1495,5 +1495,115 @@
       }
     }
   },
-  "initialRoute": "index"
+  "initialRoute": "index",
+  "navbar": {
+    "actions": {
+      "primary": {
+        "title": "Join Beta",
+        "link": "https://app.bloqr.dev"
+      },
+      "links": [
+        {
+          "title": "Help Center",
+          "link": "https://intercom.help/bloqr-ai/en"
+        },
+        {
+          "title": "Bloqr.dev",
+          "link": "https://bloqr.dev"
+        },
+        {
+          "title": "API",
+          "link": "https://api.bloqr.dev"
+        }
+      ]
+    }
+  },
+  "footer": {
+    "links": [
+      {
+        "header": "Product",
+        "items": [
+          {
+            "label": "Meet Bloqi",
+            "href": "https://bloqr.dev/meet-bloqi"
+          },
+          {
+            "label": "Join Beta",
+            "href": "https://app.bloqr.dev"
+          },
+          {
+            "label": "Pricing",
+            "href": "https://bloqr.dev/pricing"
+          },
+          {
+            "label": "Bloqr Core",
+            "href": "https://bloqr.dev/bloqr-core"
+          },
+          {
+            "label": "VPN Myths",
+            "href": "https://bloqr.dev/vpn-myths"
+          }
+        ]
+      },
+      {
+        "header": "Developers",
+        "items": [
+          {
+            "label": "API",
+            "href": "https://api.bloqr.dev"
+          },
+          {
+            "label": "GitHub",
+            "href": "https://github.com/BloqrAI/bloqr-compiler"
+          },
+          {
+            "label": "Discussions",
+            "href": "https://github.com/BloqrAI/bloqr-compiler/discussions"
+          },
+          {
+            "label": "Contribute",
+            "href": "https://github.com/BloqrAI/bloqr-compiler/blob/main/CONTRIBUTING.md"
+          }
+        ]
+      },
+      {
+        "header": "Support",
+        "items": [
+          {
+            "label": "Help Center",
+            "href": "https://intercom.help/bloqr-ai/en"
+          },
+          {
+            "label": "Status",
+            "href": "https://bloqr.statuspage.io"
+          },
+          {
+            "label": "Contact",
+            "href": "mailto:contact@bloqr.dev"
+          }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          {
+            "label": "Privacy",
+            "href": "https://bloqr.dev/privacy"
+          },
+          {
+            "label": "Terms",
+            "href": "https://bloqr.dev/terms"
+          }
+        ]
+      }
+    ],
+    "socials": {
+      "linkedin": "https://linkedin.com/company/bloqr-ai",
+      "github": "https://github.com/BloqrAI",
+      "x": "https://twitter.com/bloqr_ai",
+      "facebook": "https://facebook.com/bloqr.ai",
+      "youtube": "https://youtube.com/@bloqr-ai"
+    },
+    "copyright": "© 2026 Bloqr AI™, a trademark of Bloqr Systems™. Created by Bloqr Systems™, founded by Jayson Knight."
+  }
 }

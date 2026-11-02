@@ -39,3 +39,9 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 
 /* Dark surfaces from Filter. */
 :root.dark body, .dark body { background: var(--bg-base); color: var(--fg-1); }
+
+/* Footer: match the bloqr.dev footer (Filter tokens, quiet links, orange on hover). */
+.dai-site-footer { border-top: 1px solid var(--border); background: var(--bg-base); }
+.dai-site-footer a { color: var(--fg-2); transition: color 150ms ease; }
+.dai-site-footer a:hover { color: var(--orange-500); }
+.dai-site-footer { font-family: var(--font-body); }
