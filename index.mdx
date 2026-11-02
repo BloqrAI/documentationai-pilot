@@ -1,12 +1,13 @@
 ---
 title: Bloqr™ Documentation
+description: 'Guides, reference and architecture for Bloqr, all in one place.'
 metaTitle: Documentation Home
-description: "Guides, reference and architecture for Bloqr, all in one place."
-metaDescription: "Ads, trackers and shady sites, evicted. I'm Bloqi, Chief Ad Evictor, and this is where I keep the answers. Come on in and ask me anything."
+metaDescription: >-
+  Ads, trackers and shady sites, evicted. I'm Bloqi, Chief Ad Evictor, and this
+  is where I keep the answers. Come on in and ask me anything.
 ---
-
-<Callout kind="tip">
-  <strong>What is Bloqr?</strong>
+<Callout kind="tip" collapsed="false">
+  What is Bloqr?
 
   Bloqr helps clean up your internet by blocking ads, trackers, and unsafe domains before they load.
   Pick what you want blocked, and Bloqr keeps it updated for you.
@@ -23,80 +24,80 @@ metaDescription: "Ads, trackers and shady sites, evicted. I'm Bloqi, Chief Ad Ev
 
 <Tabs>
   <Tab title="End User">
-    <Columns cols={2}>
-      <Card title="Getting Started" href="/help/getting-started">
+    <Columns cols="2">
+      <Card title="Getting Started" href="/help/getting-started" horizontal="false">
         Get Bloqr running in a few simple steps.
       </Card>
 
-      <Card title="What Gets Blocked" href="/help/what-gets-blocked">
+      <Card title="What Gets Blocked" href="/help/what-gets-blocked" horizontal="false">
         See exactly what Bloqr protects you from.
       </Card>
 
-      <Card title="Setup Your Device" href="/help/setup-your-device">
+      <Card title="Setup Your Device" href="/help/setup-your-device" horizontal="false">
         Use Bloqr on phone, computer, or router.
       </Card>
 
-      <Card title="FAQ" href="/help/faq">
+      <Card title="FAQ" href="/help/faq" horizontal="false">
         Answers to common questions in plain language.
       </Card>
     </Columns>
   </Tab>
 
   <Tab title="Developer">
-    <Columns cols={2}>
-      <Card title="Quick Start" href="https://docs.bloqr.dev/guides/quick-start">
+    <Columns cols="2">
+      <Card title="Quick Start" href="https://docs.bloqr.dev/guides/quick-start" horizontal="false">
         Bootstrap local development in minutes.
       </Card>
 
-      <Card title="Usage: Configuration" href="https://docs.bloqr.dev/usage/configuration">
+      <Card title="Usage: Configuration" href="https://docs.bloqr.dev/usage/configuration" horizontal="false">
         Compiler schema, defaults, and examples.
       </Card>
 
-      <Card title="Development Architecture" href="https://docs.bloqr.dev/development/architecture">
+      <Card title="Development Architecture" href="https://docs.bloqr.dev/development/architecture" horizontal="false">
         Core architecture and extension points.
       </Card>
 
-      <Card title="Testing Guide" href="https://docs.bloqr.dev/testing/testing">
+      <Card title="Testing Guide" href="https://docs.bloqr.dev/testing/testing" horizontal="false">
         Unit, integration, and E2E execution patterns.
       </Card>
     </Columns>
   </Tab>
 
   <Tab title="Ops / Admin">
-    <Columns cols={2}>
-      <Card title="Deployment" href="/deployment/readme">
+    <Columns cols="2">
+      <Card title="Deployment" href="/deployment/readme" horizontal="false">
         Production deployment strategy and controls.
       </Card>
 
-      <Card title="Admin System" href="/admin/readme">
+      <Card title="Admin System" href="/admin/readme" horizontal="false">
         RBAC controls, plans, and audit capabilities.
       </Card>
 
-      <Card title="Observability" href="/observability/readme">
+      <Card title="Observability" href="/observability/readme" horizontal="false">
         Tracing, metrics, and incident telemetry.
       </Card>
 
-      <Card title="Troubleshooting" href="/troubleshooting/readme">
+      <Card title="Troubleshooting" href="/troubleshooting/readme" horizontal="false">
         Production KBs and remediation playbooks.
       </Card>
     </Columns>
   </Tab>
 
   <Tab title="API Consumer">
-    <Columns cols={2}>
-      <Card title="API Overview" href="https://docs.bloqr.dev/api/readme">
+    <Columns cols="2">
+      <Card title="API Overview" href="https://docs.bloqr.dev/api/readme" horizontal="false">
         Endpoints, request schemas, and examples.
       </Card>
 
-      <Card title="Streaming API" href="https://docs.bloqr.dev/api/streaming_api">
+      <Card title="Streaming API" href="https://docs.bloqr.dev/api/streaming_api" horizontal="false">
         Live compile status with SSE/WebSockets.
       </Card>
 
-      <Card title="API Authentication" href="https://docs.bloqr.dev/auth/api-authentication">
+      <Card title="API Authentication" href="https://docs.bloqr.dev/auth/api-authentication" horizontal="false">
         JWT and API-key auth flows.
       </Card>
 
-      <Card title="Client Libraries" href="https://docs.bloqr.dev/guides/clients">
+      <Card title="Client Libraries" href="https://docs.bloqr.dev/guides/clients" horizontal="false">
         Integrate quickly from your app stack.
       </Card>
     </Columns>
@@ -111,12 +112,12 @@ metaDescription: "Ads, trackers and shady sites, evicted. I'm Bloqi, Chief Ad Ev
 
 ## Bloqr Properties
 
-| Property | URL | Runtime | Notes |
-| --- | --- | --- | --- |
-| **Landing** | [bloqr.dev](https://bloqr.dev/) | Marketing | Main product narrative and launch funnel. |
-| **App** | [app.bloqr.dev](https://app.bloqr.dev/) | Angular | Interactive compiler dashboard and admin UX. |
-| **API** | [api.bloqr.dev](https://api.bloqr.dev/) | Worker | OpenAPI portal and API base URL: `https://api.bloqr.dev/api`. |
-| **Docs** | [docs.bloqr.dev](https://docs.bloqr.dev/) | Astro | Starlight documentation for developers and operators. |
+| Property    | URL                                       | Runtime   | Notes                                                         |
+| ----------- | ----------------------------------------- | --------- | ------------------------------------------------------------- |
+| **Landing** | [bloqr.dev](https://bloqr.dev/)           | Marketing | Main product narrative and launch funnel.                     |
+| **App**     | [app.bloqr.dev](https://app.bloqr.dev/)   | Angular   | Interactive compiler dashboard and admin UX.                  |
+| **API**     | [api.bloqr.dev](https://api.bloqr.dev/)   | Worker    | OpenAPI portal and API base URL: `https://api.bloqr.dev/api`. |
+| **Docs**    | [docs.bloqr.dev](https://docs.bloqr.dev/) | Astro     | Starlight documentation for developers and operators.         |
 
 [Explore Guides](/guides/readme)
 [Start as an End User](/help/getting-started)
