@@ -1514,6 +1514,10 @@
         {
           "title": "API",
           "link": "https://api.bloqr.dev"
+        },
+        {
+          "title": "Meet Bloqi",
+          "link": "https://bloqr.dev/meet-bloqi"
         }
       ]
     }
@@ -1598,11 +1602,13 @@
       }
     ],
     "socials": {
-      "linkedin": "https://linkedin.com/company/bloqr-ai",
+      "linkedin": "https://www.linkedin.com/company/bloqr-ai",
       "github": "https://github.com/BloqrAI",
-      "x": "https://twitter.com/bloqr_ai",
-      "facebook": "https://facebook.com/bloqr.ai",
-      "youtube": "https://youtube.com/@bloqr-ai"
+      "slack": "https://bloqriai.slack.com",
+      "facebook": "https://www.facebook.com/bloqr",
+      "instagram": "instagram.com/bloqr.ai",
+      "youtube": "https://www.youtube.com/@bloqrai",
+      "x": "https://x.com/bloqrai"
     },
     "copyright": "© 2026 Bloqr AI™, a trademark of Bloqr Systems™. Created by Bloqr Systems™, founded by Jayson Knight."
   }
