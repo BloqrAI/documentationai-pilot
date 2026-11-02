@@ -1,6 +1,5 @@
 {
   "name": "Bloqr Doqs",
-  "initialRoute": "index",
   "template": "classic",
   "icons": {
     "library": "lucide"
@@ -1469,6 +1468,7 @@
     "ai-assistant:position": "bottom-spaced",
     "page-actions": [
       "copy",
+      "download-pdf",
       "view",
       "claude",
       "chatgpt",
@@ -1486,6 +1486,14 @@
     }
   ],
   "seo": {
-    "defaultDescription": "Bloqr is your privacy layer at the network level: encrypted DNS, filtering you control, and an API to build on. Guides, reference and architecture, all in one place."
-  }
+    "defaultDescription": "Bloqr is your privacy layer at the network level: encrypted DNS, filtering you control, and an API to build on. Guides, reference and architecture, all in one place.",
+    "jsonld": {
+      "organization": {
+        "legalName": "Bloqr Systems",
+        "url": "https://bloqr.dev",
+        "name": "Bloqr AI Documentation"
+      }
+    }
+  },
+  "initialRoute": "index"
 }
