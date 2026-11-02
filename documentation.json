@@ -1,5 +1,5 @@
 {
-  "name": "Bloqr™ Doqs",
+  "name": "Bloqr™ AI Doqs",
   "template": "classic",
   "icons": {
     "library": "lucide"
@@ -1554,20 +1554,20 @@
         "header": "Developers",
         "items": [
           {
-            "label": "Bloqr™ API",
+            "label": "Bloqr™ AI API",
             "href": "https://api.bloqr.dev"
           },
           {
-            "label": "Bloqr™ Repos",
-            "href": "https://github.com/BloqrAI/bloqr-compiler"
+            "label": "Bloqr™ AI Repos",
+            "href": "https://github.com/BloqrAI/"
           },
           {
             "label": "Discussions",
-            "href": "https://github.com/BloqrAI/bloqr-compiler/discussions"
+            "href": "https://github.com/orgs/BloqrAI/discussions"
           },
           {
             "label": "Contribute",
-            "href": "https://github.com/BloqrAI/bloqr-compiler/blob/main/CONTRIBUTING.md"
+            "href": "https://github.com/BloqrAI/bloqr-core/blob/main/CONTRIBUTING.md"
           }
         ]
       },
@@ -1600,6 +1600,19 @@
             "href": "https://bloqr.dev/terms"
           }
         ]
+      },
+      {
+        "header": "Company",
+        "items": [
+          {
+            "label": "Founder Info",
+            "href": "https://jaysonknight.com"
+          },
+          {
+            "label": "Bloqr™ Systems",
+            "href": "https://github.com/enterprises/bloqrsystems"
+          }
+        ]
       }
     ],
     "socials": {
@@ -1615,5 +1628,5 @@
     "copyright": "© 2026 Bloqr AI™, a trademark of Bloqr Systems™. Created by Bloqr Systems™, founded by Jayson Knight"
   },
   "description": "Bloqr™ AI Documentation",
-  "title": "Bloqr™ Doqs"
+  "title": "Bloqr™ AI Doqs"
 }
