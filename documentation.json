@@ -1,5 +1,5 @@
 {
-  "name": "Bloqr Doqs",
+  "name": "Bloqr™ Doqs",
   "template": "classic",
   "icons": {
     "library": "lucide"
@@ -1316,7 +1316,7 @@
             "group": "Help",
             "pages": [
               {
-                "title": "Can",
+                "title": "Can't Create an Account",
                 "path": "help/cant-create-an-account",
                 "icon": "file-text"
               },
@@ -1410,7 +1410,7 @@
             "icon": "triangle-alert"
           }
         ],
-        "tab": "Help Center"
+        "tab": "Quick Start"
       },
       {
         "icon": "clock",
@@ -1472,6 +1472,7 @@
       "view",
       "claude",
       "chatgpt",
+      "perplexity",
       "mcp"
     ],
     "ai-assistant:starter-questions": [
@@ -1508,15 +1509,15 @@
           "link": "https://intercom.help/bloqr-ai/en"
         },
         {
-          "title": "Bloqr.dev",
+          "title": "Bloqr™ AI",
           "link": "https://bloqr.dev"
         },
         {
-          "title": "API",
+          "title": "Bloqr™ API",
           "link": "https://api.bloqr.dev"
         },
         {
-          "title": "Meet Bloqi",
+          "title": "Meet Bloqi™",
           "link": "https://bloqr.dev/meet-bloqi"
         }
       ]
@@ -1528,7 +1529,7 @@
         "header": "Product",
         "items": [
           {
-            "label": "Meet Bloqi",
+            "label": "Meet Bloqi™",
             "href": "https://bloqr.dev/meet-bloqi"
           },
           {
@@ -1540,7 +1541,7 @@
             "href": "https://bloqr.dev/pricing"
           },
           {
-            "label": "Bloqr Core",
+            "label": "Bloqr™ Core",
             "href": "https://bloqr.dev/bloqr-core"
           },
           {
@@ -1553,11 +1554,11 @@
         "header": "Developers",
         "items": [
           {
-            "label": "API",
+            "label": "Bloqr™ API",
             "href": "https://api.bloqr.dev"
           },
           {
-            "label": "GitHub",
+            "label": "Bloqr™ Repos",
             "href": "https://github.com/BloqrAI/bloqr-compiler"
           },
           {
@@ -1578,12 +1579,12 @@
             "href": "https://intercom.help/bloqr-ai/en"
           },
           {
-            "label": "Status",
+            "label": "Service Status",
             "href": "https://bloqr.statuspage.io"
           },
           {
-            "label": "Contact",
-            "href": "mailto:contact@bloqr.dev"
+            "label": "Contact Bloqi™",
+            "href": "mailto:hello@bloqr.dev"
           }
         ]
       },
@@ -1607,9 +1608,12 @@
       "slack": "https://bloqriai.slack.com",
       "facebook": "https://www.facebook.com/bloqr",
       "instagram": "instagram.com/bloqr.ai",
+      "threads": "https://www.threads.com/@bloqr.ai",
       "youtube": "https://www.youtube.com/@bloqrai",
       "x": "https://x.com/bloqrai"
     },
-    "copyright": "© 2026 Bloqr AI™, a trademark of Bloqr Systems™. Created by Bloqr Systems™, founded by Jayson Knight."
-  }
+    "copyright": "© 2026 Bloqr AI™, a trademark of Bloqr Systems™. Created by Bloqr Systems™, founded by Jayson Knight"
+  },
+  "description": "Bloqr™ AI Documentation",
+  "title": "Bloqr™ Doqs"
 }
